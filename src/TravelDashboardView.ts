@@ -337,9 +337,11 @@ export class TravelDashboardView extends ItemView {
             urgent.createSpan({ text: `⚠️ ${trip.urgentItems} urgent item${trip.urgentItems > 1 ? 's' : ''}` });
         }
 
-        // Right side progress ring
-        const progressWrapper = card.createDiv({ cls: 'trip-card-progress' });
-        this.renderProgressRing(progressWrapper, trip.readinessPercent);
+        // Right side progress ring - only show if trip has actual tasks
+        if (trip.totalTasks > 0) {
+            const progressWrapper = card.createDiv({ cls: 'trip-card-progress' });
+            this.renderProgressRing(progressWrapper, trip.readinessPercent);
+        }
 
         // Click to open itinerary or research
         card.addEventListener('click', () => {

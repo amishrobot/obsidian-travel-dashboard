@@ -278,8 +278,10 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       const urgent = content.createDiv({ cls: "trip-urgent" });
       urgent.createSpan({ text: `\u26A0\uFE0F ${trip.urgentItems} urgent item${trip.urgentItems > 1 ? "s" : ""}` });
     }
-    const progressWrapper = card.createDiv({ cls: "trip-card-progress" });
-    this.renderProgressRing(progressWrapper, trip.readinessPercent);
+    if (trip.totalTasks > 0) {
+      const progressWrapper = card.createDiv({ cls: "trip-card-progress" });
+      this.renderProgressRing(progressWrapper, trip.readinessPercent);
+    }
     card.addEventListener("click", () => {
       const path = trip.itineraryPath || trip.researchPath;
       if (path) {
@@ -956,6 +958,7 @@ var DataService = class {
         budget: itin.totalBudget || "TBD",
         status: this.mapItineraryStatus(itin.status),
         readinessPercent: readiness,
+        totalTasks: itin.totalTasks || 0,
         urgentItems: urgentCount,
         itineraryPath: itin.path,
         lastUpdated: /* @__PURE__ */ new Date()
@@ -973,7 +976,8 @@ var DataService = class {
           travelers: res.travelers || 1,
           budget: "TBD",
           status: "research",
-          readinessPercent: res.status === "complete" ? 30 : 15,
+          readinessPercent: 0,
+          totalTasks: 0,
           urgentItems: 0,
           researchPath: res.path,
           lastUpdated: /* @__PURE__ */ new Date()

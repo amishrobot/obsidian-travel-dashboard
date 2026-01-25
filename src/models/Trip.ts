@@ -8,6 +8,7 @@ export interface Trip {
     budget: string;
     status: 'research' | 'planning' | 'booked' | 'traveling' | 'complete';
     readinessPercent: number;
+    totalTasks: number;
     urgentItems: number;
     researchPath?: string;
     itineraryPath?: string;
