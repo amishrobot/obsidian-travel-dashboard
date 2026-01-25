@@ -1,7 +1,7 @@
 {
   "id": "travel-dashboard",
   "name": "Travel Dashboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "0.15.0",
   "description": "A sidebar dashboard for tracking travel plans, pricing, and deadlines",
   "author": "Josh Penrod",

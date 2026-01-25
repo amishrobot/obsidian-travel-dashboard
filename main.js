@@ -69,6 +69,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       return;
     }
     this.renderHeader(container);
+    this.renderHeroSection(container);
     this.renderActionsSection(container);
     this.renderTripsSection(container);
     this.renderDeadlinesSection(container);
@@ -90,6 +91,157 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       new import_obsidian.Notice("Travel data refreshed");
     });
   }
+  renderHeroSection(container) {
+    var _a;
+    if (!((_a = this.data) == null ? void 0 : _a.trips.length)) {
+      return;
+    }
+    const heroTrip = this.findHeroTrip(this.data.trips);
+    if (!heroTrip) {
+      return;
+    }
+    const { trip, daysUntilDeparture, tripStatus } = heroTrip;
+    const hero = container.createDiv({ cls: "hero-section" });
+    const decoration = hero.createDiv({ cls: "hero-decoration" });
+    decoration.innerHTML = "&#9992;";
+    const content = hero.createDiv({ cls: "hero-content" });
+    const destinationEl = content.createDiv({ cls: "hero-destination" });
+    destinationEl.createSpan({ text: trip.countryCode || "\u{1F30D}", cls: "hero-emoji" });
+    destinationEl.createSpan({ text: trip.destination, cls: "hero-destination-name" });
+    const countdownEl = content.createDiv({ cls: "hero-countdown" });
+    countdownEl.createSpan({ text: this.formatCountdown(daysUntilDeparture, tripStatus) });
+    const datesEl = content.createDiv({ cls: "hero-dates" });
+    datesEl.createSpan({ text: trip.tripDates });
+    if (trip.duration && trip.duration !== "TBD") {
+      datesEl.createSpan({ text: ` \xB7 ${trip.duration}`, cls: "hero-duration" });
+    }
+    const statusClass = `status-${trip.status}`;
+    const statusEl = content.createDiv({ cls: `hero-status ${statusClass}` });
+    statusEl.createSpan({ text: trip.status.toUpperCase() });
+    hero.addEventListener("click", () => {
+      const path = trip.itineraryPath || trip.researchPath;
+      if (path) {
+        this.app.workspace.openLinkText(path, "", false);
+      }
+    });
+    hero.style.cursor = "pointer";
+  }
+  findHeroTrip(trips) {
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    let bestTrip = null;
+    let smallestFutureDays = Infinity;
+    for (const trip of trips) {
+      const parsed = this.parseTripDates(trip.tripDates);
+      if (!parsed)
+        continue;
+      const { startDate, endDate } = parsed;
+      const daysUntilStart = Math.floor((startDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24));
+      const daysUntilEnd = Math.floor((endDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24));
+      if (daysUntilStart <= 0 && daysUntilEnd >= 0) {
+        return { trip, daysUntilDeparture: daysUntilStart, tripStatus: "traveling" };
+      }
+      if (daysUntilStart > 0 && daysUntilStart < smallestFutureDays) {
+        smallestFutureDays = daysUntilStart;
+        bestTrip = { trip, daysUntilDeparture: daysUntilStart, tripStatus: "upcoming" };
+      }
+      if (daysUntilStart < 0 && daysUntilEnd >= 0 && !bestTrip) {
+        bestTrip = { trip, daysUntilDeparture: daysUntilStart, tripStatus: "departed" };
+      }
+    }
+    return bestTrip;
+  }
+  parseTripDates(tripDates) {
+    if (!tripDates || tripDates === "TBD") {
+      return null;
+    }
+    const monthMap = {
+      "jan": 0,
+      "january": 0,
+      "feb": 1,
+      "february": 1,
+      "mar": 2,
+      "march": 2,
+      "apr": 3,
+      "april": 3,
+      "may": 4,
+      "jun": 5,
+      "june": 5,
+      "jul": 6,
+      "july": 6,
+      "aug": 7,
+      "august": 7,
+      "sep": 8,
+      "september": 8,
+      "oct": 9,
+      "october": 9,
+      "nov": 10,
+      "november": 10,
+      "dec": 11,
+      "december": 11
+    };
+    try {
+      const sameMonthPattern = /^(\w+)\s+(\d+)\s*-\s*(\d+),?\s*(\d{4})$/i;
+      let match = tripDates.match(sameMonthPattern);
+      if (match) {
+        const month = monthMap[match[1].toLowerCase().substring(0, 3)];
+        const startDay = parseInt(match[2]);
+        const endDay = parseInt(match[3]);
+        const year = parseInt(match[4]);
+        if (month !== void 0) {
+          const startDate = new Date(year, month, startDay);
+          const endDate = new Date(year, month, endDay);
+          return { startDate, endDate };
+        }
+      }
+      const diffMonthPattern = /^(\w+)\s+(\d+)\s*-\s*(\w+)\s+(\d+),?\s*(\d{4})$/i;
+      match = tripDates.match(diffMonthPattern);
+      if (match) {
+        const startMonth = monthMap[match[1].toLowerCase().substring(0, 3)];
+        const startDay = parseInt(match[2]);
+        const endMonth = monthMap[match[3].toLowerCase().substring(0, 3)];
+        const endDay = parseInt(match[4]);
+        const year = parseInt(match[5]);
+        if (startMonth !== void 0 && endMonth !== void 0) {
+          const startDate = new Date(year, startMonth, startDay);
+          const endDate = new Date(year, endMonth, endDay);
+          return { startDate, endDate };
+        }
+      }
+      const euroSameMonthPattern = /^(\d+)\s*-\s*(\d+)\s+(\w+),?\s*(\d{4})$/i;
+      match = tripDates.match(euroSameMonthPattern);
+      if (match) {
+        const startDay = parseInt(match[1]);
+        const endDay = parseInt(match[2]);
+        const month = monthMap[match[3].toLowerCase().substring(0, 3)];
+        const year = parseInt(match[4]);
+        if (month !== void 0) {
+          const startDate = new Date(year, month, startDay);
+          const endDate = new Date(year, month, endDay);
+          return { startDate, endDate };
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+  formatCountdown(daysUntilDeparture, tripStatus) {
+    if (tripStatus === "traveling") {
+      return "Currently traveling!";
+    }
+    if (tripStatus === "departed" || daysUntilDeparture < 0) {
+      const daysPast = Math.abs(daysUntilDeparture);
+      return `Departed ${daysPast} day${daysPast !== 1 ? "s" : ""} ago`;
+    }
+    if (daysUntilDeparture === 0) {
+      return "Departing today!";
+    }
+    if (daysUntilDeparture === 1) {
+      return "Departing tomorrow!";
+    }
+    return `Departing in ${daysUntilDeparture} days`;
+  }
   renderTripsSection(container) {
     var _a;
     const section = container.createDiv({ cls: "dashboard-section" });
@@ -104,41 +256,86 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   }
   renderTripCard(container, trip) {
     const card = container.createDiv({ cls: "travel-trip-card" });
-    const header = card.createDiv({ cls: "trip-card-header" });
+    const content = card.createDiv({ cls: "trip-card-content" });
+    const header = content.createDiv({ cls: "trip-card-header" });
     header.createSpan({ text: trip.countryCode || "\u{1F30D}", cls: "trip-emoji" });
     header.createSpan({ text: trip.destination, cls: "trip-name" });
-    const dates = card.createDiv({ cls: "trip-dates" });
+    const dates = content.createDiv({ cls: "trip-dates" });
     dates.createSpan({ text: trip.tripDates });
     if (trip.duration && trip.duration !== "TBD") {
       dates.createSpan({ text: ` (${trip.duration})`, cls: "trip-duration" });
     }
-    const meta = card.createDiv({ cls: "trip-meta" });
+    const meta = content.createDiv({ cls: "trip-meta" });
     meta.createSpan({ text: `${trip.travelers} traveler${trip.travelers > 1 ? "s" : ""}` });
     if (trip.budget && trip.budget !== "TBD") {
       meta.createSpan({ text: " | " });
       meta.createSpan({ text: trip.budget });
     }
     const statusClass = `status-${trip.status}`;
-    const status = card.createDiv({ cls: `trip-status ${statusClass}` });
+    const status = content.createDiv({ cls: `trip-status ${statusClass}` });
     status.createSpan({ text: trip.status.toUpperCase() });
-    const progressContainer = card.createDiv({ cls: "trip-progress" });
-    const progressBar = progressContainer.createDiv({ cls: "progress-bar" });
-    const progressFill = progressBar.createDiv({ cls: "progress-fill" });
-    progressFill.style.width = `${trip.readinessPercent}%`;
-    progressContainer.createSpan({
-      text: `${trip.readinessPercent}% ready`,
-      cls: "progress-text"
-    });
     if (trip.urgentItems > 0) {
-      const urgent = card.createDiv({ cls: "trip-urgent" });
+      const urgent = content.createDiv({ cls: "trip-urgent" });
       urgent.createSpan({ text: `\u26A0\uFE0F ${trip.urgentItems} urgent item${trip.urgentItems > 1 ? "s" : ""}` });
     }
+    const progressWrapper = card.createDiv({ cls: "trip-card-progress" });
+    this.renderProgressRing(progressWrapper, trip.readinessPercent);
     card.addEventListener("click", () => {
       const path = trip.itineraryPath || trip.researchPath;
       if (path) {
         this.app.workspace.openLinkText(path, "", false);
       }
     });
+  }
+  renderProgressRing(container, percentage) {
+    const radius = 20;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference * (1 - percentage / 100);
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("class", "progress-ring");
+    svg.setAttribute("width", "50");
+    svg.setAttribute("height", "50");
+    svg.setAttribute("viewBox", "0 0 50 50");
+    const defs = document.createElementNS(svgNS, "defs");
+    const gradient = document.createElementNS(svgNS, "linearGradient");
+    gradient.setAttribute("id", `progressGradient-${percentage}`);
+    gradient.setAttribute("x1", "0%");
+    gradient.setAttribute("y1", "0%");
+    gradient.setAttribute("x2", "100%");
+    gradient.setAttribute("y2", "100%");
+    const stop1 = document.createElementNS(svgNS, "stop");
+    stop1.setAttribute("offset", "0%");
+    stop1.setAttribute("stop-color", "#6366f1");
+    gradient.appendChild(stop1);
+    const stop2 = document.createElementNS(svgNS, "stop");
+    stop2.setAttribute("offset", "100%");
+    stop2.setAttribute("stop-color", "#4f46e5");
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+    svg.appendChild(defs);
+    const bgCircle = document.createElementNS(svgNS, "circle");
+    bgCircle.setAttribute("class", "progress-ring-bg");
+    bgCircle.setAttribute("cx", "25");
+    bgCircle.setAttribute("cy", "25");
+    bgCircle.setAttribute("r", radius.toString());
+    svg.appendChild(bgCircle);
+    const fillCircle = document.createElementNS(svgNS, "circle");
+    fillCircle.setAttribute("class", "progress-ring-fill");
+    fillCircle.setAttribute("cx", "25");
+    fillCircle.setAttribute("cy", "25");
+    fillCircle.setAttribute("r", radius.toString());
+    fillCircle.setAttribute("stroke", `url(#progressGradient-${percentage})`);
+    fillCircle.setAttribute("stroke-dasharray", circumference.toString());
+    fillCircle.setAttribute("stroke-dashoffset", strokeDashoffset.toString());
+    svg.appendChild(fillCircle);
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("class", "progress-ring-text");
+    text.setAttribute("x", "25");
+    text.setAttribute("y", "25");
+    text.textContent = `${percentage}%`;
+    svg.appendChild(text);
+    container.appendChild(svg);
   }
   renderDeadlinesSection(container) {
     var _a;
@@ -149,27 +346,34 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       section.createDiv({ text: "No upcoming deadlines", cls: "empty-state" });
       return;
     }
-    const list = section.createDiv({ cls: "deadline-list" });
-    for (const deadline of deadlines) {
-      const item = list.createDiv({ cls: "deadline-item" });
+    const timeline = section.createDiv({ cls: "deadline-timeline" });
+    for (let i = 0; i < deadlines.length; i++) {
+      const deadline = deadlines[i];
+      const isLastItem = i === deadlines.length - 1;
+      const item = timeline.createDiv({ cls: "timeline-item" });
+      const connector = item.createDiv({ cls: "timeline-connector" });
       const urgencyClass = this.getUrgencyClass(deadline.daysRemaining);
-      const indicator = item.createDiv({ cls: `deadline-indicator ${urgencyClass}` });
-      if (deadline.daysRemaining === 0) {
-        indicator.createSpan({ text: "NOW" });
-      } else {
-        indicator.createSpan({ text: `${deadline.daysRemaining}d` });
+      connector.createDiv({ cls: `timeline-node ${urgencyClass}` });
+      if (!isLastItem) {
+        connector.createDiv({ cls: "timeline-line" });
       }
-      const desc = item.createDiv({ cls: "deadline-desc" });
-      desc.createSpan({ text: deadline.description });
-      desc.createSpan({ text: ` (${deadline.destination})`, cls: "deadline-dest" });
+      const content = item.createDiv({ cls: "timeline-content" });
+      const dateEl = content.createDiv({ cls: "timeline-date" });
+      if (deadline.daysRemaining === 0) {
+        dateEl.setText("NOW");
+      } else {
+        dateEl.setText(`${deadline.daysRemaining} days`);
+      }
+      const descEl = content.createDiv({ cls: "timeline-desc" });
+      descEl.setText(`${deadline.description} (${deadline.destination})`);
     }
   }
   getUrgencyClass(days) {
     if (days <= 7)
-      return "urgent-red";
+      return "node-urgent";
     if (days <= 21)
-      return "urgent-yellow";
-    return "urgent-green";
+      return "node-soon";
+    return "node-upcoming";
   }
   renderPricesSection(container) {
     var _a;
