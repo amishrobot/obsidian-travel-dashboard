@@ -70,11 +70,11 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     }
     this.renderHeader(container);
     this.renderHeroSection(container);
-    this.renderActionsSection(container);
     this.renderTripsSection(container);
+    this.renderDealsSection(container);
     this.renderDeadlinesSection(container);
     this.renderPricesSection(container);
-    this.renderDealsSection(container);
+    this.renderActionsSection(container);
   }
   renderHeader(container) {
     const header = container.createDiv({ cls: "dashboard-header" });
@@ -300,9 +300,9 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   renderTripsSection(container) {
     var _a;
     const section = container.createDiv({ cls: "dashboard-section" });
-    section.createEl("h3", { text: "ACTIVE TRIPS" });
+    section.createEl("h3", { text: "RESEARCHING" });
     if (!((_a = this.data) == null ? void 0 : _a.trips.length)) {
-      section.createDiv({ text: "No active trips", cls: "empty-state" });
+      section.createDiv({ text: "No trips being researched", cls: "empty-state" });
       return;
     }
     for (const trip of this.data.trips) {
@@ -539,7 +539,9 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     section.createEl("h3", { text: "DEALS & OPPORTUNITIES" });
     const deals = ((_a = this.data) == null ? void 0 : _a.deals.slice(0, 4)) || [];
     if (!deals.length) {
-      section.createDiv({ text: "No seasonal deals found", cls: "empty-state" });
+      const empty = section.createDiv({ cls: "empty-state" });
+      empty.createSpan({ text: "No deals in season. " });
+      empty.createEl("em", { text: "Check destination-intelligence.md" });
       return;
     }
     for (const deal of deals) {

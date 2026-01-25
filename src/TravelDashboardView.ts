@@ -65,11 +65,11 @@ export class TravelDashboardView extends ItemView {
         // Hero Section (next upcoming trip with countdown)
         this.renderHeroSection(container);
 
-        // Quick Actions (at the top for easy access)
-        this.renderActionsSection(container);
-
-        // Active Trips
+        // Researching (trips in progress)
         this.renderTripsSection(container);
+
+        // Deals & Opportunities (right after trips for visibility)
+        this.renderDealsSection(container);
 
         // Deadlines
         this.renderDeadlinesSection(container);
@@ -77,8 +77,8 @@ export class TravelDashboardView extends ItemView {
         // Price Tracker
         this.renderPricesSection(container);
 
-        // Deals
-        this.renderDealsSection(container);
+        // Quick Actions (at bottom since they just copy commands)
+        this.renderActionsSection(container);
     }
 
     private renderHeader(container: Element) {
@@ -358,10 +358,10 @@ export class TravelDashboardView extends ItemView {
 
     private renderTripsSection(container: Element) {
         const section = container.createDiv({ cls: 'dashboard-section' });
-        section.createEl('h3', { text: 'ACTIVE TRIPS' });
+        section.createEl('h3', { text: 'RESEARCHING' });
 
         if (!this.data?.trips.length) {
-            section.createDiv({ text: 'No active trips', cls: 'empty-state' });
+            section.createDiv({ text: 'No trips being researched', cls: 'empty-state' });
             return;
         }
 
@@ -663,7 +663,9 @@ export class TravelDashboardView extends ItemView {
         const deals = this.data?.deals.slice(0, 4) || [];
 
         if (!deals.length) {
-            section.createDiv({ text: 'No seasonal deals found', cls: 'empty-state' });
+            const empty = section.createDiv({ cls: 'empty-state' });
+            empty.createSpan({ text: 'No deals in season. ' });
+            empty.createEl('em', { text: 'Check destination-intelligence.md' });
             return;
         }
 
