@@ -4,6 +4,7 @@ import { DataService } from './services/DataService';
 
 export default class TravelDashboardPlugin extends Plugin {
     dataService: DataService;
+    private refreshTimeout: NodeJS.Timeout | null = null;
 
     async onload() {
         console.log('Loading Travel Dashboard plugin');
@@ -76,13 +77,19 @@ export default class TravelDashboardPlugin extends Plugin {
     }
 
     async refreshDashboard() {
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TRAVEL_DASHBOARD);
-        for (const leaf of leaves) {
-            const view = leaf.view as TravelDashboardView;
-            if (view && view.refresh) {
-                // Debounce refresh
-                setTimeout(() => view.refresh(), 500);
-            }
+        // Cancel any pending refresh to properly debounce
+        if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
         }
+
+        this.refreshTimeout = setTimeout(() => {
+            const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TRAVEL_DASHBOARD);
+            for (const leaf of leaves) {
+                const view = leaf.view as TravelDashboardView;
+                if (view && view.refresh) {
+                    view.refresh();
+                }
+            }
+        }, 500);
     }
 }
