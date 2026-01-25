@@ -1,8 +1,84 @@
 import { App, TFile } from 'obsidian';
-import { Deal } from '../models/Trip';
+import { Deal, DiscoveredDeal } from '../models/Trip';
 
 export class DealsParser {
     constructor(private app: App) {}
+
+    async parseDiscoveredDeals(inboxPath: string): Promise<DiscoveredDeal[]> {
+        // Find the most recent flight-deal-alert file in inbox
+        const inboxFolder = this.app.vault.getAbstractFileByPath(inboxPath);
+        if (!inboxFolder) return [];
+
+        const files = this.app.vault.getFiles()
+            .filter(f => f.path.startsWith(inboxPath) && f.name.includes('flight-deal-alert'))
+            .sort((a, b) => b.stat.mtime - a.stat.mtime);
+
+        if (files.length === 0) return [];
+
+        const latestAlert = files[0];
+        const content = await this.app.vault.read(latestAlert);
+
+        return this.parseAlertContent(content, latestAlert.name);
+    }
+
+    private parseAlertContent(content: string, filename: string): DiscoveredDeal[] {
+        const deals: DiscoveredDeal[] = [];
+
+        // Extract date from filename (e.g., "2026-01-24-flight-deal-alert.md")
+        const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
+        const alertDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
+
+        // Find the "Great Deals Found" section
+        const greatDealsSection = content.match(/## 🟢 Great Deals Found[\s\S]*?(?=## 🎯|## 📊|## 💡|$)/);
+        if (!greatDealsSection) return deals;
+
+        // Parse each deal entry (### N. Destination - $XXX RT (XX% off!))
+        const dealPattern = /### \d+\.\s+([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/gi;
+        const datePattern = /\*\*Best dates\*\*:\s*([^\n]+)/gi;
+        const typicalPattern = /\*\*Typical price\*\*:\s*~?\$([0-9,]+)/gi;
+        const windowPattern = /✅\s*\*\*([^*]+)\*\*|✅\s+([^\n-]+?)(?:\s*-|\s*$)/gi;
+
+        let match;
+        const dealBlocks = greatDealsSection[0].split(/### \d+\./);
+
+        for (const block of dealBlocks) {
+            if (!block.trim()) continue;
+
+            // Parse destination and price from header
+            const headerMatch = block.match(/([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
+            if (!headerMatch) continue;
+
+            const destination = headerMatch[1].trim();
+            const price = parseInt(headerMatch[2].replace(/,/g, ''));
+            const percentOff = parseInt(headerMatch[3]);
+            const isBucketList = !!headerMatch[4];
+
+            // Parse dates
+            const datesMatch = block.match(/\*\*Best dates\*\*:\s*([^\n]+)/i);
+            const dates = datesMatch ? datesMatch[1].trim() : '';
+
+            // Parse typical price
+            const typicalMatch = block.match(/\*\*Typical price\*\*:\s*~?\$([0-9,]+)/i);
+            const typicalPrice = typicalMatch ? parseInt(typicalMatch[1].replace(/,/g, '')) : Math.round(price / (1 - percentOff / 100));
+
+            // Parse window match (look for ✅ lines)
+            const windowMatches = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
+            const windowMatch = windowMatches ? (windowMatches[1] || windowMatches[2] || '').trim() : undefined;
+
+            deals.push({
+                destination,
+                price,
+                typicalPrice,
+                percentOff,
+                dates,
+                isBucketList,
+                windowMatch: windowMatch || undefined,
+                alertDate,
+            });
+        }
+
+        return deals;
+    }
 
     async parse(filePath: string): Promise<Deal[]> {
         const file = this.app.vault.getAbstractFileByPath(filePath);

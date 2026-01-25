@@ -60,6 +60,17 @@ export interface Deal {
     tripType: string;
 }
 
+export interface DiscoveredDeal {
+    destination: string;
+    price: number;
+    typicalPrice: number;
+    percentOff: number;
+    dates: string;
+    isBucketList: boolean;
+    windowMatch?: string;  // e.g., "Spring Break", "Memorial Day"
+    alertDate: string;
+}
+
 export interface DashboardData {
     trips: Trip[];
     committedTrip: Trip | null;
@@ -67,5 +78,6 @@ export interface DashboardData {
     deadlines: Deadline[];
     prices: PriceSnapshot[];
     deals: Deal[];
+    discoveredDeals: DiscoveredDeal[];
     lastRefresh: Date;
 }

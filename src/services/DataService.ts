@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { Trip, Deadline, PriceSnapshot, Deal, DashboardData, TravelWindow } from '../models/Trip';
+import { Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, DashboardData, TravelWindow } from '../models/Trip';
 import { ResearchParser, ResearchData } from '../parsers/ResearchParser';
 import { ItineraryParser, ItineraryData } from '../parsers/ItineraryParser';
 import { PricingParser } from '../parsers/PricingParser';
@@ -23,6 +23,7 @@ export class DataService {
     private gapsPath = 'Personal/travel/04-gaps/questions.md';
     private intelPath = 'Personal/travel/00-source-material/destination-intelligence.md';
     private profilePath = 'Personal/travel/travel-profile.md';
+    private inboxPath = '_inbox';
 
     constructor(private app: App) {
         this.researchParser = new ResearchParser(app);
@@ -34,13 +35,14 @@ export class DataService {
     }
 
     async loadAll(): Promise<DashboardData> {
-        const [research, itineraries, prices, gaps, allDeals, travelWindows] = await Promise.all([
+        const [research, itineraries, prices, gaps, allDeals, travelWindows, discoveredDeals] = await Promise.all([
             this.researchParser.parseAll(this.researchPath),
             this.itineraryParser.parseAll(this.itineraryPath),
             this.pricingParser.parseAll(this.pricingPath),
             this.gapsParser.parse(this.gapsPath),
             this.dealsParser.parse(this.intelPath),
             this.windowParser.parse(this.profilePath),
+            this.dealsParser.parseDiscoveredDeals(this.inboxPath),
         ]);
 
         const trips = this.buildTrips(research, itineraries, gaps);
@@ -62,6 +64,7 @@ export class DataService {
             deadlines,
             prices,
             deals,
+            discoveredDeals,
             lastRefresh: new Date(),
         };
     }

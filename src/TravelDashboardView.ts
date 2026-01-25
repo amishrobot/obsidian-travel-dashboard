@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import TravelDashboardPlugin from './main';
-import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, TravelWindow } from './models/Trip';
+import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, TravelWindow } from './models/Trip';
 
 export const VIEW_TYPE_TRAVEL_DASHBOARD = 'travel-dashboard-view';
 
@@ -660,12 +660,38 @@ export class TravelDashboardView extends ItemView {
         const section = container.createDiv({ cls: 'dashboard-section' });
         section.createEl('h3', { text: 'DEALS & OPPORTUNITIES' });
 
+        const discoveredDeals = this.data?.discoveredDeals || [];
+
+        // Show discovered deals if we have them
+        if (discoveredDeals.length > 0) {
+            const alertDate = discoveredDeals[0]?.alertDate;
+            if (alertDate) {
+                const dateLabel = section.createDiv({ cls: 'deals-date-label' });
+                dateLabel.createSpan({ text: `From ${alertDate} scan` });
+            }
+
+            const dealsGrid = section.createDiv({ cls: 'discovered-deals-grid' });
+
+            for (const deal of discoveredDeals.slice(0, 8)) {
+                this.renderDiscoveredDealCard(dealsGrid, deal);
+            }
+
+            // Link to full alert
+            const viewAll = section.createDiv({ cls: 'deals-view-all' });
+            const link = viewAll.createEl('a', { text: 'View full deal alert →' });
+            link.addEventListener('click', () => {
+                this.app.workspace.openLinkText(`_inbox/${alertDate}-flight-deal-alert.md`, '', false);
+            });
+            return;
+        }
+
+        // Fallback to seasonal deals
         const deals = this.data?.deals.slice(0, 4) || [];
 
         if (!deals.length) {
             const empty = section.createDiv({ cls: 'empty-state' });
-            empty.createSpan({ text: 'No deals in season. ' });
-            empty.createEl('em', { text: 'Check destination-intelligence.md' });
+            empty.createSpan({ text: 'No deals found. ' });
+            empty.createEl('em', { text: 'Run /travel.deals to scan for opportunities' });
             return;
         }
 
@@ -691,6 +717,44 @@ export class TravelDashboardView extends ItemView {
                 this.copyCommand(`/travel.research ${deal.destination}`);
             });
         }
+    }
+
+    private renderDiscoveredDealCard(container: Element, deal: DiscoveredDeal) {
+        const card = container.createDiv({ cls: 'discovered-deal-card' });
+
+        // Deal indicator (green circle for great deals)
+        const indicator = card.createDiv({ cls: 'deal-indicator deal-great' });
+
+        // Main content
+        const content = card.createDiv({ cls: 'deal-content' });
+
+        // Destination with bucket list star
+        const destRow = content.createDiv({ cls: 'deal-dest-row' });
+        destRow.createSpan({ text: deal.destination, cls: 'deal-destination' });
+        if (deal.isBucketList) {
+            destRow.createSpan({ text: ' ⭐', cls: 'deal-bucket-list' });
+        }
+
+        // Price and discount
+        const priceRow = content.createDiv({ cls: 'deal-price-row' });
+        priceRow.createSpan({ text: `$${deal.price}`, cls: 'deal-price' });
+        priceRow.createSpan({ text: ` (-${deal.percentOff}%)`, cls: 'deal-discount' });
+
+        // Dates (condensed)
+        if (deal.dates) {
+            const datesRow = content.createDiv({ cls: 'deal-dates-row' });
+            datesRow.createSpan({ text: deal.dates, cls: 'deal-dates' });
+        }
+
+        // Window match badge
+        if (deal.windowMatch) {
+            const matchBadge = content.createDiv({ cls: 'deal-window-match' });
+            matchBadge.createSpan({ text: `✓ ${deal.windowMatch}` });
+        }
+
+        card.addEventListener('click', () => {
+            this.copyCommand(`/travel.research ${deal.destination}`);
+        });
     }
 
     private async copyCommand(command: string) {

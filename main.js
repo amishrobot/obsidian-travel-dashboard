@@ -534,14 +534,32 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     }
   }
   renderDealsSection(container) {
-    var _a;
+    var _a, _b, _c;
     const section = container.createDiv({ cls: "dashboard-section" });
     section.createEl("h3", { text: "DEALS & OPPORTUNITIES" });
-    const deals = ((_a = this.data) == null ? void 0 : _a.deals.slice(0, 4)) || [];
+    const discoveredDeals = ((_a = this.data) == null ? void 0 : _a.discoveredDeals) || [];
+    if (discoveredDeals.length > 0) {
+      const alertDate = (_b = discoveredDeals[0]) == null ? void 0 : _b.alertDate;
+      if (alertDate) {
+        const dateLabel = section.createDiv({ cls: "deals-date-label" });
+        dateLabel.createSpan({ text: `From ${alertDate} scan` });
+      }
+      const dealsGrid = section.createDiv({ cls: "discovered-deals-grid" });
+      for (const deal of discoveredDeals.slice(0, 8)) {
+        this.renderDiscoveredDealCard(dealsGrid, deal);
+      }
+      const viewAll = section.createDiv({ cls: "deals-view-all" });
+      const link = viewAll.createEl("a", { text: "View full deal alert \u2192" });
+      link.addEventListener("click", () => {
+        this.app.workspace.openLinkText(`_inbox/${alertDate}-flight-deal-alert.md`, "", false);
+      });
+      return;
+    }
+    const deals = ((_c = this.data) == null ? void 0 : _c.deals.slice(0, 4)) || [];
     if (!deals.length) {
       const empty = section.createDiv({ cls: "empty-state" });
-      empty.createSpan({ text: "No deals in season. " });
-      empty.createEl("em", { text: "Check destination-intelligence.md" });
+      empty.createSpan({ text: "No deals found. " });
+      empty.createEl("em", { text: "Run /travel.deals to scan for opportunities" });
       return;
     }
     for (const deal of deals) {
@@ -562,6 +580,30 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
         this.copyCommand(`/travel.research ${deal.destination}`);
       });
     }
+  }
+  renderDiscoveredDealCard(container, deal) {
+    const card = container.createDiv({ cls: "discovered-deal-card" });
+    const indicator = card.createDiv({ cls: "deal-indicator deal-great" });
+    const content = card.createDiv({ cls: "deal-content" });
+    const destRow = content.createDiv({ cls: "deal-dest-row" });
+    destRow.createSpan({ text: deal.destination, cls: "deal-destination" });
+    if (deal.isBucketList) {
+      destRow.createSpan({ text: " \u2B50", cls: "deal-bucket-list" });
+    }
+    const priceRow = content.createDiv({ cls: "deal-price-row" });
+    priceRow.createSpan({ text: `$${deal.price}`, cls: "deal-price" });
+    priceRow.createSpan({ text: ` (-${deal.percentOff}%)`, cls: "deal-discount" });
+    if (deal.dates) {
+      const datesRow = content.createDiv({ cls: "deal-dates-row" });
+      datesRow.createSpan({ text: deal.dates, cls: "deal-dates" });
+    }
+    if (deal.windowMatch) {
+      const matchBadge = content.createDiv({ cls: "deal-window-match" });
+      matchBadge.createSpan({ text: `\u2713 ${deal.windowMatch}` });
+    }
+    card.addEventListener("click", () => {
+      this.copyCommand(`/travel.research ${deal.destination}`);
+    });
   }
   async copyCommand(command) {
     try {
@@ -879,6 +921,59 @@ var DealsParser = class {
   constructor(app) {
     this.app = app;
   }
+  async parseDiscoveredDeals(inboxPath) {
+    const inboxFolder = this.app.vault.getAbstractFileByPath(inboxPath);
+    if (!inboxFolder)
+      return [];
+    const files = this.app.vault.getFiles().filter((f) => f.path.startsWith(inboxPath) && f.name.includes("flight-deal-alert")).sort((a, b) => b.stat.mtime - a.stat.mtime);
+    if (files.length === 0)
+      return [];
+    const latestAlert = files[0];
+    const content = await this.app.vault.read(latestAlert);
+    return this.parseAlertContent(content, latestAlert.name);
+  }
+  parseAlertContent(content, filename) {
+    const deals = [];
+    const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
+    const alertDate = dateMatch ? dateMatch[1] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const greatDealsSection = content.match(/## 🟢 Great Deals Found[\s\S]*?(?=## 🎯|## 📊|## 💡|$)/);
+    if (!greatDealsSection)
+      return deals;
+    const dealPattern = /### \d+\.\s+([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/gi;
+    const datePattern = /\*\*Best dates\*\*:\s*([^\n]+)/gi;
+    const typicalPattern = /\*\*Typical price\*\*:\s*~?\$([0-9,]+)/gi;
+    const windowPattern = /✅\s*\*\*([^*]+)\*\*|✅\s+([^\n-]+?)(?:\s*-|\s*$)/gi;
+    let match;
+    const dealBlocks = greatDealsSection[0].split(/### \d+\./);
+    for (const block of dealBlocks) {
+      if (!block.trim())
+        continue;
+      const headerMatch = block.match(/([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
+      if (!headerMatch)
+        continue;
+      const destination = headerMatch[1].trim();
+      const price = parseInt(headerMatch[2].replace(/,/g, ""));
+      const percentOff = parseInt(headerMatch[3]);
+      const isBucketList = !!headerMatch[4];
+      const datesMatch = block.match(/\*\*Best dates\*\*:\s*([^\n]+)/i);
+      const dates = datesMatch ? datesMatch[1].trim() : "";
+      const typicalMatch = block.match(/\*\*Typical price\*\*:\s*~?\$([0-9,]+)/i);
+      const typicalPrice = typicalMatch ? parseInt(typicalMatch[1].replace(/,/g, "")) : Math.round(price / (1 - percentOff / 100));
+      const windowMatches = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
+      const windowMatch = windowMatches ? (windowMatches[1] || windowMatches[2] || "").trim() : void 0;
+      deals.push({
+        destination,
+        price,
+        typicalPrice,
+        percentOff,
+        dates,
+        isBucketList,
+        windowMatch: windowMatch || void 0,
+        alertDate
+      });
+    }
+    return deals;
+  }
   async parse(filePath) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!file || !(file instanceof import_obsidian3.TFile))
@@ -1119,6 +1214,7 @@ var DataService = class {
     this.gapsPath = "Personal/travel/04-gaps/questions.md";
     this.intelPath = "Personal/travel/00-source-material/destination-intelligence.md";
     this.profilePath = "Personal/travel/travel-profile.md";
+    this.inboxPath = "_inbox";
     this.researchParser = new ResearchParser(app);
     this.itineraryParser = new ItineraryParser(app);
     this.pricingParser = new PricingParser(app);
@@ -1127,13 +1223,14 @@ var DataService = class {
     this.windowParser = new TravelWindowParser(app);
   }
   async loadAll() {
-    const [research, itineraries, prices, gaps, allDeals, travelWindows] = await Promise.all([
+    const [research, itineraries, prices, gaps, allDeals, travelWindows, discoveredDeals] = await Promise.all([
       this.researchParser.parseAll(this.researchPath),
       this.itineraryParser.parseAll(this.itineraryPath),
       this.pricingParser.parseAll(this.pricingPath),
       this.gapsParser.parse(this.gapsPath),
       this.dealsParser.parse(this.intelPath),
-      this.windowParser.parse(this.profilePath)
+      this.windowParser.parse(this.profilePath),
+      this.dealsParser.parseDiscoveredDeals(this.inboxPath)
     ]);
     const trips = this.buildTrips(research, itineraries, gaps);
     const deadlines = this.buildDeadlines(itineraries, gaps, prices);
@@ -1147,6 +1244,7 @@ var DataService = class {
       deadlines,
       prices,
       deals,
+      discoveredDeals,
       lastRefresh: /* @__PURE__ */ new Date()
     };
   }
