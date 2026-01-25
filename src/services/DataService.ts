@@ -1,10 +1,11 @@
 import { App } from 'obsidian';
-import { Trip, Deadline, PriceSnapshot, Deal, DashboardData } from '../models/Trip';
+import { Trip, Deadline, PriceSnapshot, Deal, DashboardData, TravelWindow } from '../models/Trip';
 import { ResearchParser, ResearchData } from '../parsers/ResearchParser';
 import { ItineraryParser, ItineraryData } from '../parsers/ItineraryParser';
 import { PricingParser } from '../parsers/PricingParser';
 import { GapsParser, GapItem } from '../parsers/GapsParser';
 import { DealsParser } from '../parsers/DealsParser';
+import { TravelWindowParser } from '../parsers/TravelWindowParser';
 
 export class DataService {
     private researchParser: ResearchParser;
@@ -12,6 +13,7 @@ export class DataService {
     private pricingParser: PricingParser;
     private gapsParser: GapsParser;
     private dealsParser: DealsParser;
+    private windowParser: TravelWindowParser;
 
     // Paths relative to vault root
     private basePath = 'Personal/travel';
@@ -20,6 +22,7 @@ export class DataService {
     private pricingPath = 'Personal/travel/00-source-material/pricing-snapshots';
     private gapsPath = 'Personal/travel/04-gaps/questions.md';
     private intelPath = 'Personal/travel/00-source-material/destination-intelligence.md';
+    private profilePath = 'Personal/travel/travel-profile.md';
 
     constructor(private app: App) {
         this.researchParser = new ResearchParser(app);
@@ -27,23 +30,35 @@ export class DataService {
         this.pricingParser = new PricingParser(app);
         this.gapsParser = new GapsParser(app);
         this.dealsParser = new DealsParser(app);
+        this.windowParser = new TravelWindowParser(app);
     }
 
     async loadAll(): Promise<DashboardData> {
-        const [research, itineraries, prices, gaps, allDeals] = await Promise.all([
+        const [research, itineraries, prices, gaps, allDeals, travelWindows] = await Promise.all([
             this.researchParser.parseAll(this.researchPath),
             this.itineraryParser.parseAll(this.itineraryPath),
             this.pricingParser.parseAll(this.pricingPath),
             this.gapsParser.parse(this.gapsPath),
             this.dealsParser.parse(this.intelPath),
+            this.windowParser.parse(this.profilePath),
         ]);
 
         const trips = this.buildTrips(research, itineraries, gaps);
         const deadlines = this.buildDeadlines(itineraries, gaps, prices);
         const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
 
+        // Find committed trip (soonest by date)
+        const committedTrip = trips
+            .filter(t => t.committed)
+            .sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates))[0] || null;
+
+        // Get next travel window (only if no committed trip)
+        const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
+
         return {
             trips,
+            committedTrip,
+            nextWindow,
             deadlines,
             prices,
             deals,
@@ -78,6 +93,7 @@ export class DataService {
                 travelers: itin.travelers,
                 budget: itin.totalBudget || 'TBD',
                 status: this.mapItineraryStatus(itin.status),
+                committed: itin.committed,
                 readinessPercent: readiness,
                 totalTasks: itin.totalTasks || 0,
                 urgentItems: urgentCount,
@@ -99,6 +115,7 @@ export class DataService {
                     travelers: res.travelers || 1,
                     budget: 'TBD',
                     status: 'research',
+                    committed: false,
                     readinessPercent: 0,
                     totalTasks: 0,
                     urgentItems: 0,

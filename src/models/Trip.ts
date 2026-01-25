@@ -7,12 +7,24 @@ export interface Trip {
     travelers: number;
     budget: string;
     status: 'research' | 'planning' | 'booked' | 'traveling' | 'complete';
+    committed: boolean;
     readinessPercent: number;
     totalTasks: number;
     urgentItems: number;
     researchPath?: string;
     itineraryPath?: string;
     lastUpdated: Date;
+}
+
+export interface TravelWindow {
+    name: string;
+    dates: string;
+    startDate: Date;
+    duration: string;
+    ptoNeeded: string;
+    whoCanGo: string;
+    notes?: string;
+    isTopPick?: boolean;
 }
 
 export interface Deadline {
@@ -50,6 +62,8 @@ export interface Deal {
 
 export interface DashboardData {
     trips: Trip[];
+    committedTrip: Trip | null;
+    nextWindow: TravelWindow | null;
     deadlines: Deadline[];
     prices: PriceSnapshot[];
     deals: Deal[];

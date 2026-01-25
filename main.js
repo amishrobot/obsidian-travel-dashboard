@@ -22,7 +22,7 @@ __export(main_exports, {
   default: () => TravelDashboardPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/TravelDashboardView.ts
 var import_obsidian = require("obsidian");
@@ -92,18 +92,33 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     });
   }
   renderHeroSection(container) {
-    var _a;
-    if (!((_a = this.data) == null ? void 0 : _a.trips.length)) {
+    var _a, _b;
+    if ((_a = this.data) == null ? void 0 : _a.committedTrip) {
+      this.renderCommittedTripHero(container, this.data.committedTrip);
       return;
     }
-    const heroTrip = this.findHeroTrip(this.data.trips);
-    if (!heroTrip) {
+    if ((_b = this.data) == null ? void 0 : _b.nextWindow) {
+      this.renderTravelWindowHero(container, this.data.nextWindow);
       return;
     }
-    const { trip, daysUntilDeparture, tripStatus } = heroTrip;
-    const hero = container.createDiv({ cls: "hero-section" });
-    const decoration = hero.createDiv({ cls: "hero-decoration" });
-    decoration.innerHTML = "&#9992;";
+  }
+  renderCommittedTripHero(container, trip) {
+    const parsed = this.parseTripDates(trip.tripDates);
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    let daysUntilDeparture = 0;
+    let tripStatus = "upcoming";
+    if (parsed) {
+      const daysUntilStart = Math.floor((parsed.startDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24));
+      const daysUntilEnd = Math.floor((parsed.endDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24));
+      daysUntilDeparture = daysUntilStart;
+      if (daysUntilStart <= 0 && daysUntilEnd >= 0) {
+        tripStatus = "traveling";
+      } else if (daysUntilStart < 0) {
+        tripStatus = "departed";
+      }
+    }
+    const hero = container.createDiv({ cls: "hero-section hero-committed" });
     const content = hero.createDiv({ cls: "hero-content" });
     const destinationEl = content.createDiv({ cls: "hero-destination" });
     destinationEl.createSpan({ text: trip.countryCode || "\u{1F30D}", cls: "hero-emoji" });
@@ -115,9 +130,8 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     if (trip.duration && trip.duration !== "TBD") {
       datesEl.createSpan({ text: ` \xB7 ${trip.duration}`, cls: "hero-duration" });
     }
-    const statusClass = `status-${trip.status}`;
-    const statusEl = content.createDiv({ cls: `hero-status ${statusClass}` });
-    statusEl.createSpan({ text: trip.status.toUpperCase() });
+    const statusEl = content.createDiv({ cls: "hero-status status-booked" });
+    statusEl.createSpan({ text: "COMMITTED" });
     hero.addEventListener("click", () => {
       const path = trip.itineraryPath || trip.researchPath;
       if (path) {
@@ -125,6 +139,50 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       }
     });
     hero.style.cursor = "pointer";
+  }
+  renderTravelWindowHero(container, window) {
+    var _a;
+    const hero = container.createDiv({ cls: "hero-section hero-window" });
+    const content = hero.createDiv({ cls: "hero-content" });
+    const titleEl = content.createDiv({ cls: "hero-destination" });
+    titleEl.createSpan({ text: "\u{1F4C5}", cls: "hero-emoji" });
+    titleEl.createSpan({ text: window.name, cls: "hero-destination-name" });
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntil = Math.floor((window.startDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24));
+    const countdownEl = content.createDiv({ cls: "hero-countdown hero-window-countdown" });
+    if (daysUntil > 0) {
+      countdownEl.createSpan({ text: `Next travel window in ${daysUntil} days` });
+    } else if (daysUntil === 0) {
+      countdownEl.createSpan({ text: "Travel window starts today!" });
+    } else {
+      countdownEl.createSpan({ text: "Travel window now open" });
+    }
+    const datesEl = content.createDiv({ cls: "hero-dates" });
+    datesEl.createSpan({ text: window.dates });
+    if (window.duration) {
+      datesEl.createSpan({ text: ` \xB7 ${window.duration}`, cls: "hero-duration" });
+    }
+    const metaEl = content.createDiv({ cls: "hero-window-meta" });
+    metaEl.createSpan({ text: `${window.ptoNeeded} PTO needed` });
+    metaEl.createSpan({ text: " \xB7 " });
+    metaEl.createSpan({ text: window.whoCanGo });
+    const researchingTrips = ((_a = this.data) == null ? void 0 : _a.trips.filter(
+      (t) => !t.committed && t.status === "research"
+    )) || [];
+    if (researchingTrips.length > 0) {
+      const researchEl = content.createDiv({ cls: "hero-window-research" });
+      researchEl.createSpan({
+        text: `${researchingTrips.length} destination${researchingTrips.length > 1 ? "s" : ""} being researched`
+      });
+    }
+    if (window.isTopPick) {
+      const badgeEl = content.createDiv({ cls: "hero-status status-booked" });
+      badgeEl.createSpan({ text: "\u2B50 TOP PICK" });
+    } else {
+      const badgeEl = content.createDiv({ cls: "hero-status status-planning" });
+      badgeEl.createSpan({ text: "OPEN WINDOW" });
+    }
   }
   findHeroTrip(trips) {
     const today = /* @__PURE__ */ new Date();
@@ -599,6 +657,7 @@ var ItineraryParser = class {
       travelStyle: frontmatter.travel_style,
       basedOn: frontmatter.based_on,
       status: this.normalizeStatus(frontmatter.status),
+      committed: frontmatter.committed === true,
       totalBudget: frontmatter.total_budget_estimate,
       travelers: frontmatter.travelers || 1,
       urgentTasks,
@@ -904,6 +963,151 @@ var DealsParser = class {
   }
 };
 
+// src/parsers/TravelWindowParser.ts
+var import_obsidian4 = require("obsidian");
+var TravelWindowParser = class {
+  constructor(app) {
+    this.app = app;
+  }
+  async parse(profilePath) {
+    const file = this.app.vault.getAbstractFileByPath(profilePath);
+    if (!file || !(file instanceof import_obsidian4.TFile)) {
+      return [];
+    }
+    const content = await this.app.vault.read(file);
+    const windows = [];
+    const bestWindowsMatch = content.match(/### BEST Windows[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
+    if (bestWindowsMatch) {
+      const tableRows = this.extractTableRows(bestWindowsMatch[0]);
+      for (const row of tableRows) {
+        const window = this.parseWindowRow(row);
+        if (window)
+          windows.push(window);
+      }
+    }
+    const topPickMatch = content.match(/### ⭐ TOP PICK:([^\n]+)[\s\S]*?(?=\n---|\n###|$)/i);
+    if (topPickMatch) {
+      const topPick = this.parseTopPick(topPickMatch[0], topPickMatch[1].trim());
+      if (topPick) {
+        topPick.isTopPick = true;
+        const existingIndex = windows.findIndex(
+          (w) => w.name.toLowerCase().includes("july 4th") || w.name.toLowerCase().includes("shutdown")
+        );
+        if (existingIndex >= 0) {
+          windows[existingIndex] = { ...windows[existingIndex], ...topPick, isTopPick: true };
+        } else {
+          windows.unshift(topPick);
+        }
+      }
+    }
+    windows.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    return windows;
+  }
+  getNextWindow(windows) {
+    const now = /* @__PURE__ */ new Date();
+    for (const window of windows) {
+      if (window.startDate > now) {
+        return window;
+      }
+    }
+    return windows[0] || null;
+  }
+  extractTableRows(tableSection) {
+    const lines = tableSection.split("\n").filter((l) => l.startsWith("|"));
+    const rows = [];
+    for (let i = 2; i < lines.length; i++) {
+      const cells = lines[i].split("|").slice(1, -1).map((c) => c.trim());
+      if (cells.length >= 4 && cells[0]) {
+        rows.push(cells);
+      }
+    }
+    return rows;
+  }
+  parseWindowRow(cells) {
+    if (cells.length < 4)
+      return null;
+    const name = cells[0].replace(/\*\*/g, "").trim();
+    const dates = cells[1].trim();
+    const duration = cells[2].replace(/\*\*/g, "").trim();
+    const ptoNeeded = cells[3].replace(/\*\*/g, "").trim();
+    const notes = cells[4] || "";
+    const startDate = this.parseDateRange(dates);
+    if (!startDate)
+      return null;
+    return {
+      name,
+      dates,
+      startDate,
+      duration,
+      ptoNeeded,
+      whoCanGo: this.inferWhoCanGo(name, notes),
+      notes: notes.trim() || void 0
+    };
+  }
+  parseTopPick(section, name) {
+    var _a, _b, _c, _d;
+    const datesMatch = section.match(/\*\*Dates\*\*[:\s|]+([^\n|]+)/i);
+    const durationMatch = section.match(/\*\*Duration\*\*[:\s|]+([^\n|]+)/i);
+    const ptoMatch = section.match(/\*\*PTO Required\*\*[:\s|]+([^\n|]+)/i);
+    const whyMatch = section.match(/\*\*Why it works\*\*[:\s|]+([^\n|]+)/i);
+    const dates = ((_a = datesMatch == null ? void 0 : datesMatch[1]) == null ? void 0 : _a.trim()) || "";
+    const startDate = this.parseDateRange(dates);
+    if (!startDate)
+      return null;
+    return {
+      name,
+      dates,
+      startDate,
+      duration: ((_b = durationMatch == null ? void 0 : durationMatch[1]) == null ? void 0 : _b.trim()) || "",
+      ptoNeeded: ((_c = ptoMatch == null ? void 0 : ptoMatch[1]) == null ? void 0 : _c.trim()) || "0",
+      whoCanGo: "Full family",
+      notes: (_d = whyMatch == null ? void 0 : whyMatch[1]) == null ? void 0 : _d.trim(),
+      isTopPick: true
+    };
+  }
+  parseDateRange(dateStr) {
+    const cleanDate = dateStr.replace(/\*\*/g, "").trim();
+    const monthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+    if (monthMatch) {
+      const monthNames = {
+        "jan": 0,
+        "feb": 1,
+        "mar": 2,
+        "apr": 3,
+        "may": 4,
+        "jun": 5,
+        "jul": 6,
+        "aug": 7,
+        "sep": 8,
+        "oct": 9,
+        "nov": 10,
+        "dec": 11
+      };
+      const month = monthNames[monthMatch[1].toLowerCase()];
+      const day = parseInt(monthMatch[2]);
+      const year = 2026;
+      return new Date(year, month, day);
+    }
+    return null;
+  }
+  inferWhoCanGo(name, notes) {
+    const combined = `${name} ${notes}`.toLowerCase();
+    if (combined.includes("full family") || combined.includes("all kids") || combined.includes("summer") || combined.includes("both schools")) {
+      return "Full family";
+    }
+    if (combined.includes("alpine only") || combined.includes("parents +")) {
+      return "Parents + youngest";
+    }
+    if (combined.includes("couple") || combined.includes("romantic")) {
+      return "Couple only";
+    }
+    if (combined.includes("flexible") || combined.includes("adults")) {
+      return "Adults / flexible";
+    }
+    return "Full family";
+  }
+};
+
 // src/services/DataService.ts
 var DataService = class {
   constructor(app) {
@@ -915,25 +1119,32 @@ var DataService = class {
     this.pricingPath = "Personal/travel/00-source-material/pricing-snapshots";
     this.gapsPath = "Personal/travel/04-gaps/questions.md";
     this.intelPath = "Personal/travel/00-source-material/destination-intelligence.md";
+    this.profilePath = "Personal/travel/travel-profile.md";
     this.researchParser = new ResearchParser(app);
     this.itineraryParser = new ItineraryParser(app);
     this.pricingParser = new PricingParser(app);
     this.gapsParser = new GapsParser(app);
     this.dealsParser = new DealsParser(app);
+    this.windowParser = new TravelWindowParser(app);
   }
   async loadAll() {
-    const [research, itineraries, prices, gaps, allDeals] = await Promise.all([
+    const [research, itineraries, prices, gaps, allDeals, travelWindows] = await Promise.all([
       this.researchParser.parseAll(this.researchPath),
       this.itineraryParser.parseAll(this.itineraryPath),
       this.pricingParser.parseAll(this.pricingPath),
       this.gapsParser.parse(this.gapsPath),
-      this.dealsParser.parse(this.intelPath)
+      this.dealsParser.parse(this.intelPath),
+      this.windowParser.parse(this.profilePath)
     ]);
     const trips = this.buildTrips(research, itineraries, gaps);
     const deadlines = this.buildDeadlines(itineraries, gaps, prices);
     const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
+    const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates))[0] || null;
+    const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
     return {
       trips,
+      committedTrip,
+      nextWindow,
       deadlines,
       prices,
       deals,
@@ -957,6 +1168,7 @@ var DataService = class {
         travelers: itin.travelers,
         budget: itin.totalBudget || "TBD",
         status: this.mapItineraryStatus(itin.status),
+        committed: itin.committed,
         readinessPercent: readiness,
         totalTasks: itin.totalTasks || 0,
         urgentItems: urgentCount,
@@ -976,6 +1188,7 @@ var DataService = class {
           travelers: res.travelers || 1,
           budget: "TBD",
           status: "research",
+          committed: false,
           readinessPercent: 0,
           totalTasks: 0,
           urgentItems: 0,
@@ -1165,7 +1378,7 @@ var DataService = class {
 };
 
 // src/main.ts
-var TravelDashboardPlugin = class extends import_obsidian4.Plugin {
+var TravelDashboardPlugin = class extends import_obsidian5.Plugin {
   constructor() {
     super(...arguments);
     this.refreshTimeout = null;

@@ -9,6 +9,7 @@ export interface ItineraryData {
     travelStyle?: string;
     basedOn?: string;
     status: 'draft' | 'final' | 'booked' | 'completed';
+    committed: boolean;
     totalBudget?: string;
     travelers: number;
     urgentTasks: string[];
@@ -53,6 +54,7 @@ export class ItineraryParser {
             travelStyle: frontmatter.travel_style,
             basedOn: frontmatter.based_on,
             status: this.normalizeStatus(frontmatter.status),
+            committed: frontmatter.committed === true,
             totalBudget: frontmatter.total_budget_estimate,
             travelers: frontmatter.travelers || 1,
             urgentTasks,

@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import TravelDashboardPlugin from './main';
-import { DashboardData, Trip, Deadline, PriceSnapshot, Deal } from './models/Trip';
+import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, TravelWindow } from './models/Trip';
 
 export const VIEW_TYPE_TRAVEL_DASHBOARD = 'travel-dashboard-view';
 
@@ -99,25 +99,43 @@ export class TravelDashboardView extends ItemView {
     }
 
     private renderHeroSection(container: Element) {
-        if (!this.data?.trips.length) {
+        // Mode 1: Committed trip exists - show departure countdown
+        if (this.data?.committedTrip) {
+            this.renderCommittedTripHero(container, this.data.committedTrip);
             return;
         }
 
-        // Find the next upcoming trip (or currently traveling)
-        const heroTrip = this.findHeroTrip(this.data.trips);
-        if (!heroTrip) {
+        // Mode 2: No committed trip - show next travel window
+        if (this.data?.nextWindow) {
+            this.renderTravelWindowHero(container, this.data.nextWindow);
             return;
         }
 
-        const { trip, daysUntilDeparture, tripStatus } = heroTrip;
+        // Fallback: No data to show
+    }
 
-        const hero = container.createDiv({ cls: 'hero-section' });
+    private renderCommittedTripHero(container: Element, trip: Trip) {
+        const parsed = this.parseTripDates(trip.tripDates);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        // Travel-themed decoration (airplane icon)
-        const decoration = hero.createDiv({ cls: 'hero-decoration' });
-        decoration.innerHTML = '&#9992;'; // Airplane symbol
+        let daysUntilDeparture = 0;
+        let tripStatus: 'upcoming' | 'traveling' | 'departed' = 'upcoming';
 
-        // Main content wrapper
+        if (parsed) {
+            const daysUntilStart = Math.floor((parsed.startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            const daysUntilEnd = Math.floor((parsed.endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+            daysUntilDeparture = daysUntilStart;
+            if (daysUntilStart <= 0 && daysUntilEnd >= 0) {
+                tripStatus = 'traveling';
+            } else if (daysUntilStart < 0) {
+                tripStatus = 'departed';
+            }
+        }
+
+        const hero = container.createDiv({ cls: 'hero-section hero-committed' });
+
         const content = hero.createDiv({ cls: 'hero-content' });
 
         // Large destination with country emoji
@@ -129,28 +147,83 @@ export class TravelDashboardView extends ItemView {
         const countdownEl = content.createDiv({ cls: 'hero-countdown' });
         countdownEl.createSpan({ text: this.formatCountdown(daysUntilDeparture, tripStatus) });
 
-        // Trip dates prominently displayed
+        // Trip dates
         const datesEl = content.createDiv({ cls: 'hero-dates' });
         datesEl.createSpan({ text: trip.tripDates });
         if (trip.duration && trip.duration !== 'TBD') {
             datesEl.createSpan({ text: ` · ${trip.duration}`, cls: 'hero-duration' });
         }
 
-        // Status badge
-        const statusClass = `status-${trip.status}`;
-        const statusEl = content.createDiv({ cls: `hero-status ${statusClass}` });
-        statusEl.createSpan({ text: trip.status.toUpperCase() });
+        // Status badge - show COMMITTED
+        const statusEl = content.createDiv({ cls: 'hero-status status-booked' });
+        statusEl.createSpan({ text: 'COMMITTED' });
 
-        // Make the hero section clickable
+        // Click to open
         hero.addEventListener('click', () => {
             const path = trip.itineraryPath || trip.researchPath;
             if (path) {
                 this.app.workspace.openLinkText(path, '', false);
             }
         });
-
-        // Add clickable cursor style
         hero.style.cursor = 'pointer';
+    }
+
+    private renderTravelWindowHero(container: Element, window: TravelWindow) {
+        const hero = container.createDiv({ cls: 'hero-section hero-window' });
+        const content = hero.createDiv({ cls: 'hero-content' });
+
+        // Window name with calendar icon
+        const titleEl = content.createDiv({ cls: 'hero-destination' });
+        titleEl.createSpan({ text: '📅', cls: 'hero-emoji' });
+        titleEl.createSpan({ text: window.name, cls: 'hero-destination-name' });
+
+        // Days until window
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysUntil = Math.floor((window.startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        const countdownEl = content.createDiv({ cls: 'hero-countdown hero-window-countdown' });
+        if (daysUntil > 0) {
+            countdownEl.createSpan({ text: `Next travel window in ${daysUntil} days` });
+        } else if (daysUntil === 0) {
+            countdownEl.createSpan({ text: 'Travel window starts today!' });
+        } else {
+            countdownEl.createSpan({ text: 'Travel window now open' });
+        }
+
+        // Dates and duration
+        const datesEl = content.createDiv({ cls: 'hero-dates' });
+        datesEl.createSpan({ text: window.dates });
+        if (window.duration) {
+            datesEl.createSpan({ text: ` · ${window.duration}`, cls: 'hero-duration' });
+        }
+
+        // PTO and who can go
+        const metaEl = content.createDiv({ cls: 'hero-window-meta' });
+        metaEl.createSpan({ text: `${window.ptoNeeded} PTO needed` });
+        metaEl.createSpan({ text: ' · ' });
+        metaEl.createSpan({ text: window.whoCanGo });
+
+        // If there are trips being researched for this window, show count
+        const researchingTrips = this.data?.trips.filter(t =>
+            !t.committed && t.status === 'research'
+        ) || [];
+
+        if (researchingTrips.length > 0) {
+            const researchEl = content.createDiv({ cls: 'hero-window-research' });
+            researchEl.createSpan({
+                text: `${researchingTrips.length} destination${researchingTrips.length > 1 ? 's' : ''} being researched`
+            });
+        }
+
+        // Top pick badge
+        if (window.isTopPick) {
+            const badgeEl = content.createDiv({ cls: 'hero-status status-booked' });
+            badgeEl.createSpan({ text: '⭐ TOP PICK' });
+        } else {
+            const badgeEl = content.createDiv({ cls: 'hero-status status-planning' });
+            badgeEl.createSpan({ text: 'OPEN WINDOW' });
+        }
     }
 
     private findHeroTrip(trips: Trip[]): { trip: Trip; daysUntilDeparture: number; tripStatus: 'upcoming' | 'traveling' | 'departed' } | null {

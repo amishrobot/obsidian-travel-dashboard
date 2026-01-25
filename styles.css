@@ -223,6 +223,29 @@
     letter-spacing: 0.03em;
 }
 
+/* Hero - Travel Window variant */
+.hero-window .hero-window-countdown {
+    color: var(--td-blue);
+}
+
+.hero-window-meta {
+    font-size: 13px;
+    color: var(--td-text-secondary);
+    margin-bottom: 8px;
+}
+
+.hero-window-research {
+    font-size: 12px;
+    color: var(--td-text-muted);
+    margin-bottom: 12px;
+    font-style: italic;
+}
+
+/* Hero - Committed variant */
+.hero-committed {
+    border-left: 4px solid var(--td-green);
+}
+
 /* ============================================
    Trip Cards
    ============================================ */
