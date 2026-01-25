@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import TravelDashboardPlugin from './main';
-import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, TravelWindow, Milestone } from './models/Trip';
+import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, TravelWindow, Milestone, ActionItem } from './models/Trip';
 
 export const VIEW_TYPE_TRAVEL_DASHBOARD = 'travel-dashboard-view';
 
@@ -62,6 +62,9 @@ export class TravelDashboardView extends ItemView {
         // Header
         this.renderHeader(container);
 
+        // ACTION REQUIRED section (at the very top, before hero)
+        this.renderActionRequiredSection(container);
+
         // Hero Section (next upcoming trip with countdown)
         this.renderHeroSection(container);
 
@@ -99,6 +102,75 @@ export class TravelDashboardView extends ItemView {
             refreshBtn.removeClass('spinning');
             new Notice('Travel data refreshed');
         });
+    }
+
+    private renderActionRequiredSection(container: Element) {
+        const actionItems = this.data?.actionItems || [];
+
+        // Only show if there are action items
+        if (!actionItems.length) return;
+
+        const section = container.createDiv({ cls: 'action-required-section' });
+
+        // Header with fire emoji
+        const header = section.createDiv({ cls: 'action-required-header' });
+        header.createSpan({ text: 'ACTION REQUIRED', cls: 'action-required-title' });
+
+        // Action items list
+        const list = section.createDiv({ cls: 'action-required-list' });
+
+        for (let i = 0; i < Math.min(actionItems.length, 5); i++) {
+            const item = actionItems[i];
+            const isLast = i === Math.min(actionItems.length, 5) - 1;
+
+            const itemEl = list.createDiv({
+                cls: `action-required-item action-${item.urgency}`
+            });
+
+            // Tree connector
+            const connector = itemEl.createDiv({ cls: 'action-connector' });
+            connector.createSpan({ text: isLast ? '└──' : '├──', cls: 'tree-branch' });
+
+            // Content
+            const content = itemEl.createDiv({ cls: 'action-content' });
+
+            if (item.type === 'deal-match' && item.deal) {
+                // Deal match: show price prominently
+                const priceEl = content.createSpan({ cls: 'action-price' });
+                priceEl.setText(`$${item.deal.price}`);
+
+                content.createSpan({ cls: 'action-text' });
+                content.lastElementChild?.setText(` ${item.deal.destination} fits your ${item.windowName} window`);
+
+                const meta = content.createDiv({ cls: 'action-meta' });
+                meta.createSpan({ text: `${item.daysAway} days away` });
+                meta.createSpan({ text: ' - ' });
+                meta.createSpan({ text: `${item.deal.percentOff}% below typical`, cls: 'action-discount' });
+            } else {
+                // Window with no trip
+                content.createSpan({ cls: 'action-text' });
+                content.lastElementChild?.setText(item.message);
+
+                const meta = content.createDiv({ cls: 'action-meta' });
+                meta.createSpan({ text: `${item.daysAway} days` });
+                meta.createSpan({ text: ' - ' });
+                meta.createSpan({ text: 'NO TRIP PLANNED', cls: 'action-warning' });
+            }
+
+            // Click handler
+            if (item.deal) {
+                itemEl.addEventListener('click', () => {
+                    this.copyCommand(`/travel.research ${item.deal?.destination}`);
+                });
+                itemEl.style.cursor = 'pointer';
+            }
+        }
+
+        // Show count if more items
+        if (actionItems.length > 5) {
+            const more = section.createDiv({ cls: 'action-more' });
+            more.createSpan({ text: `+ ${actionItems.length - 5} more action items` });
+        }
     }
 
     private renderHeroSection(container: Element) {

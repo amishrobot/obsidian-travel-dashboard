@@ -88,13 +88,14 @@ export class TravelWindowParser {
         const ptoNeeded = cells[3].replace(/\*\*/g, '').trim();
         const notes = cells[4] || '';
 
-        const startDate = this.parseDateRange(dates);
-        if (!startDate) return null;
+        const dateRange = this.parseDateRange(dates);
+        if (!dateRange) return null;
 
         return {
             name,
             dates,
-            startDate,
+            startDate: dateRange.start,
+            endDate: dateRange.end,
             duration,
             ptoNeeded,
             whoCanGo: this.inferWhoCanGo(name, notes),
@@ -110,14 +111,15 @@ export class TravelWindowParser {
         const whyMatch = section.match(/\*\*Why it works\*\*[:\s|]+([^\n|]+)/i);
 
         const dates = datesMatch?.[1]?.trim() || '';
-        const startDate = this.parseDateRange(dates);
+        const dateRange = this.parseDateRange(dates);
 
-        if (!startDate) return null;
+        if (!dateRange) return null;
 
         return {
             name,
             dates,
-            startDate,
+            startDate: dateRange.start,
+            endDate: dateRange.end,
             duration: durationMatch?.[1]?.trim() || '',
             ptoNeeded: ptoMatch?.[1]?.trim() || '0',
             whoCanGo: 'Full family',
@@ -126,22 +128,62 @@ export class TravelWindowParser {
         };
     }
 
-    private parseDateRange(dateStr: string): Date | null {
-        // Handle formats like "Jun 27 - Jul 5" or "May 22-25"
-        // Extract first date for sorting
-        const cleanDate = dateStr.replace(/\*\*/g, '').trim();
+    private parseDateRange(dateStr: string): { start: Date; end: Date } | null {
+        // Handle formats like "Jun 27 - Jul 5", "May 22-25", "Sat Jun 27 - Sun Jul 5"
+        const cleanDate = dateStr.replace(/\*\*/g, '').replace(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*/gi, '').trim();
+        const year = 2026; // Default to current planning year
 
-        // Try to extract month and day
-        const monthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
-        if (monthMatch) {
-            const monthNames: Record<string, number> = {
-                'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
-                'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+        const monthNames: Record<string, number> = {
+            'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+            'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+        };
+
+        // Pattern 1: "Jun 27 - Jul 5" (different months)
+        const diffMonthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+        if (diffMonthMatch) {
+            const startMonth = monthNames[diffMonthMatch[1].toLowerCase()];
+            const startDay = parseInt(diffMonthMatch[2]);
+            const endMonth = monthNames[diffMonthMatch[3].toLowerCase()];
+            const endDay = parseInt(diffMonthMatch[4]);
+            return {
+                start: new Date(year, startMonth, startDay),
+                end: new Date(year, endMonth, endDay)
             };
-            const month = monthNames[monthMatch[1].toLowerCase()];
-            const day = parseInt(monthMatch[2]);
-            const year = 2026; // Default to current planning year
-            return new Date(year, month, day);
+        }
+
+        // Pattern 2: "May 22-25" (same month)
+        const sameMonthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
+        if (sameMonthMatch) {
+            const month = monthNames[sameMonthMatch[1].toLowerCase()];
+            const startDay = parseInt(sameMonthMatch[2]);
+            const endDay = parseInt(sameMonthMatch[3]);
+            return {
+                start: new Date(year, month, startDay),
+                end: new Date(year, month, endDay)
+            };
+        }
+
+        // Pattern 3: "Late May - Aug" (flexible month ranges)
+        const flexibleMatch = cleanDate.match(/(Late|Early)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+        if (flexibleMatch) {
+            const startMonth = monthNames[flexibleMatch[2].toLowerCase()];
+            const endMonth = monthNames[flexibleMatch[3].toLowerCase()];
+            const startDay = flexibleMatch[1]?.toLowerCase() === 'late' ? 20 : 1;
+            return {
+                start: new Date(year, startMonth, startDay),
+                end: new Date(year, endMonth, 28) // End of month approximation
+            };
+        }
+
+        // Pattern 4: Single month with day "Jun 19"
+        const singleMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+        if (singleMatch) {
+            const month = monthNames[singleMatch[1].toLowerCase()];
+            const day = parseInt(singleMatch[2]);
+            return {
+                start: new Date(year, month, day),
+                end: new Date(year, month, day)
+            };
         }
 
         return null;

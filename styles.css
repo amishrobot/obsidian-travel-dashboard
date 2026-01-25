@@ -145,6 +145,124 @@
 }
 
 /* ============================================
+   ACTION REQUIRED Section
+   ============================================ */
+.action-required-section {
+    background: var(--td-red-light);
+    border: 1px solid var(--td-red);
+    border-left: 4px solid var(--td-red);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--td-shadow);
+}
+
+.action-required-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.action-required-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--td-red);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.action-required-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.action-required-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--td-card);
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.action-required-item:hover {
+    box-shadow: var(--td-shadow-hover);
+}
+
+.action-connector {
+    flex-shrink: 0;
+    color: var(--td-text-muted);
+}
+
+.tree-branch {
+    font-family: var(--td-font-mono);
+    font-size: 12px;
+    color: var(--td-red);
+    opacity: 0.6;
+}
+
+.action-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.action-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--td-green);
+    font-variant-numeric: tabular-nums;
+}
+
+.action-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--td-text);
+}
+
+.action-meta {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--td-text-muted);
+    margin-top: 2px;
+}
+
+.action-discount {
+    color: var(--td-green);
+    font-weight: 600;
+}
+
+.action-warning {
+    color: var(--td-red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Urgency styling */
+.action-high {
+    border-left: 3px solid var(--td-red);
+}
+
+.action-medium {
+    border-left: 3px solid var(--td-amber);
+}
+
+.action-low {
+    border-left: 3px solid var(--td-green);
+}
+
+.action-more {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--td-text-muted);
+}
+
+/* ============================================
    Hero Section
    ============================================ */
 .hero-section {

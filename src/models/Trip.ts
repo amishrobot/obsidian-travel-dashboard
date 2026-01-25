@@ -20,11 +20,23 @@ export interface TravelWindow {
     name: string;
     dates: string;
     startDate: Date;
+    endDate: Date;
     duration: string;
     ptoNeeded: string;
     whoCanGo: string;
     notes?: string;
     isTopPick?: boolean;
+}
+
+export interface ActionItem {
+    type: 'deal-match' | 'window-no-trip';
+    urgency: 'high' | 'medium' | 'low';
+    daysAway: number;
+    message: string;
+    subMessage?: string;
+    destination?: string;
+    windowName?: string;
+    deal?: DiscoveredDeal;
 }
 
 export interface Deadline {
@@ -85,6 +97,8 @@ export interface DashboardData {
     trips: Trip[];
     committedTrip: Trip | null;
     nextWindow: TravelWindow | null;
+    travelWindows: TravelWindow[];
+    actionItems: ActionItem[];
     deadlines: Deadline[];
     milestones: Milestone[];
     prices: PriceSnapshot[];

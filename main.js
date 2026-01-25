@@ -69,6 +69,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       return;
     }
     this.renderHeader(container);
+    this.renderActionRequiredSection(container);
     this.renderHeroSection(container);
     this.renderMilestonesSection(container);
     this.renderTripsSection(container);
@@ -91,6 +92,54 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       refreshBtn.removeClass("spinning");
       new import_obsidian.Notice("Travel data refreshed");
     });
+  }
+  renderActionRequiredSection(container) {
+    var _a, _b, _c;
+    const actionItems = ((_a = this.data) == null ? void 0 : _a.actionItems) || [];
+    if (!actionItems.length)
+      return;
+    const section = container.createDiv({ cls: "action-required-section" });
+    const header = section.createDiv({ cls: "action-required-header" });
+    header.createSpan({ text: "ACTION REQUIRED", cls: "action-required-title" });
+    const list = section.createDiv({ cls: "action-required-list" });
+    for (let i = 0; i < Math.min(actionItems.length, 5); i++) {
+      const item = actionItems[i];
+      const isLast = i === Math.min(actionItems.length, 5) - 1;
+      const itemEl = list.createDiv({
+        cls: `action-required-item action-${item.urgency}`
+      });
+      const connector = itemEl.createDiv({ cls: "action-connector" });
+      connector.createSpan({ text: isLast ? "\u2514\u2500\u2500" : "\u251C\u2500\u2500", cls: "tree-branch" });
+      const content = itemEl.createDiv({ cls: "action-content" });
+      if (item.type === "deal-match" && item.deal) {
+        const priceEl = content.createSpan({ cls: "action-price" });
+        priceEl.setText(`$${item.deal.price}`);
+        content.createSpan({ cls: "action-text" });
+        (_b = content.lastElementChild) == null ? void 0 : _b.setText(` ${item.deal.destination} fits your ${item.windowName} window`);
+        const meta = content.createDiv({ cls: "action-meta" });
+        meta.createSpan({ text: `${item.daysAway} days away` });
+        meta.createSpan({ text: " - " });
+        meta.createSpan({ text: `${item.deal.percentOff}% below typical`, cls: "action-discount" });
+      } else {
+        content.createSpan({ cls: "action-text" });
+        (_c = content.lastElementChild) == null ? void 0 : _c.setText(item.message);
+        const meta = content.createDiv({ cls: "action-meta" });
+        meta.createSpan({ text: `${item.daysAway} days` });
+        meta.createSpan({ text: " - " });
+        meta.createSpan({ text: "NO TRIP PLANNED", cls: "action-warning" });
+      }
+      if (item.deal) {
+        itemEl.addEventListener("click", () => {
+          var _a2;
+          this.copyCommand(`/travel.research ${(_a2 = item.deal) == null ? void 0 : _a2.destination}`);
+        });
+        itemEl.style.cursor = "pointer";
+      }
+    }
+    if (actionItems.length > 5) {
+      const more = section.createDiv({ cls: "action-more" });
+      more.createSpan({ text: `+ ${actionItems.length - 5} more action items` });
+    }
   }
   renderHeroSection(container) {
     var _a, _b;
@@ -1161,13 +1210,14 @@ var TravelWindowParser = class {
     const duration = cells[2].replace(/\*\*/g, "").trim();
     const ptoNeeded = cells[3].replace(/\*\*/g, "").trim();
     const notes = cells[4] || "";
-    const startDate = this.parseDateRange(dates);
-    if (!startDate)
+    const dateRange = this.parseDateRange(dates);
+    if (!dateRange)
       return null;
     return {
       name,
       dates,
-      startDate,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
       duration,
       ptoNeeded,
       whoCanGo: this.inferWhoCanGo(name, notes),
@@ -1181,13 +1231,14 @@ var TravelWindowParser = class {
     const ptoMatch = section.match(/\*\*PTO Required\*\*[:\s|]+([^\n|]+)/i);
     const whyMatch = section.match(/\*\*Why it works\*\*[:\s|]+([^\n|]+)/i);
     const dates = ((_a = datesMatch == null ? void 0 : datesMatch[1]) == null ? void 0 : _a.trim()) || "";
-    const startDate = this.parseDateRange(dates);
-    if (!startDate)
+    const dateRange = this.parseDateRange(dates);
+    if (!dateRange)
       return null;
     return {
       name,
       dates,
-      startDate,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
       duration: ((_b = durationMatch == null ? void 0 : durationMatch[1]) == null ? void 0 : _b.trim()) || "",
       ptoNeeded: ((_c = ptoMatch == null ? void 0 : ptoMatch[1]) == null ? void 0 : _c.trim()) || "0",
       whoCanGo: "Full family",
@@ -1196,27 +1247,63 @@ var TravelWindowParser = class {
     };
   }
   parseDateRange(dateStr) {
-    const cleanDate = dateStr.replace(/\*\*/g, "").trim();
-    const monthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
-    if (monthMatch) {
-      const monthNames = {
-        "jan": 0,
-        "feb": 1,
-        "mar": 2,
-        "apr": 3,
-        "may": 4,
-        "jun": 5,
-        "jul": 6,
-        "aug": 7,
-        "sep": 8,
-        "oct": 9,
-        "nov": 10,
-        "dec": 11
+    var _a;
+    const cleanDate = dateStr.replace(/\*\*/g, "").replace(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*/gi, "").trim();
+    const year = 2026;
+    const monthNames = {
+      "jan": 0,
+      "feb": 1,
+      "mar": 2,
+      "apr": 3,
+      "may": 4,
+      "jun": 5,
+      "jul": 6,
+      "aug": 7,
+      "sep": 8,
+      "oct": 9,
+      "nov": 10,
+      "dec": 11
+    };
+    const diffMonthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+    if (diffMonthMatch) {
+      const startMonth = monthNames[diffMonthMatch[1].toLowerCase()];
+      const startDay = parseInt(diffMonthMatch[2]);
+      const endMonth = monthNames[diffMonthMatch[3].toLowerCase()];
+      const endDay = parseInt(diffMonthMatch[4]);
+      return {
+        start: new Date(year, startMonth, startDay),
+        end: new Date(year, endMonth, endDay)
       };
-      const month = monthNames[monthMatch[1].toLowerCase()];
-      const day = parseInt(monthMatch[2]);
-      const year = 2026;
-      return new Date(year, month, day);
+    }
+    const sameMonthMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
+    if (sameMonthMatch) {
+      const month = monthNames[sameMonthMatch[1].toLowerCase()];
+      const startDay = parseInt(sameMonthMatch[2]);
+      const endDay = parseInt(sameMonthMatch[3]);
+      return {
+        start: new Date(year, month, startDay),
+        end: new Date(year, month, endDay)
+      };
+    }
+    const flexibleMatch = cleanDate.match(/(Late|Early)?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+    if (flexibleMatch) {
+      const startMonth = monthNames[flexibleMatch[2].toLowerCase()];
+      const endMonth = monthNames[flexibleMatch[3].toLowerCase()];
+      const startDay = ((_a = flexibleMatch[1]) == null ? void 0 : _a.toLowerCase()) === "late" ? 20 : 1;
+      return {
+        start: new Date(year, startMonth, startDay),
+        end: new Date(year, endMonth, 28)
+        // End of month approximation
+      };
+    }
+    const singleMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+    if (singleMatch) {
+      const month = monthNames[singleMatch[1].toLowerCase()];
+      const day = parseInt(singleMatch[2]);
+      return {
+        start: new Date(year, month, day),
+        end: new Date(year, month, day)
+      };
     }
     return null;
   }
@@ -1244,11 +1331,11 @@ var DataService = class {
     this.app = app;
     // Paths relative to vault root
     this.basePath = "Personal/travel";
-    this.researchPath = "Personal/travel/01-research";
-    this.itineraryPath = "Personal/travel/02-itineraries";
-    this.pricingPath = "Personal/travel/00-source-material/pricing-snapshots";
-    this.gapsPath = "Personal/travel/04-gaps/questions.md";
-    this.intelPath = "Personal/travel/00-source-material/destination-intelligence.md";
+    this.researchPath = "Personal/travel/research";
+    this.itineraryPath = "Personal/travel/trips";
+    this.pricingPath = "Personal/travel/pricing/snapshots";
+    this.gapsPath = "Personal/travel/questions.md";
+    this.intelPath = "Personal/travel/pricing/destination-intelligence.md";
     this.profilePath = "Personal/travel/travel-profile.md";
     this.inboxPath = "_inbox";
     this.researchParser = new ResearchParser(app);
@@ -1274,10 +1361,13 @@ var DataService = class {
     const milestones = await this.parseMilestones();
     const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates))[0] || null;
     const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
+    const actionItems = this.buildActionItems(travelWindows, discoveredDeals, trips);
     return {
       trips,
       committedTrip,
       nextWindow,
+      travelWindows,
+      actionItems,
       deadlines,
       milestones,
       prices,
@@ -1285,6 +1375,114 @@ var DataService = class {
       discoveredDeals,
       lastRefresh: /* @__PURE__ */ new Date()
     };
+  }
+  /**
+   * Build action items: deals that match upcoming windows + windows with no planned trip
+   */
+  buildActionItems(windows, discoveredDeals, trips) {
+    const items = [];
+    const now = /* @__PURE__ */ new Date();
+    now.setHours(0, 0, 0, 0);
+    const upcomingWindows = windows.filter((w) => {
+      const daysUntil = Math.floor((w.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+      return daysUntil > 0 && daysUntil <= 120;
+    });
+    for (const deal of discoveredDeals) {
+      const dealDates = this.parseDealDates(deal.dates);
+      if (!dealDates)
+        continue;
+      for (const window of upcomingWindows) {
+        if (this.datesOverlap(dealDates.start, dealDates.end, window.startDate, window.endDate)) {
+          const daysAway = Math.floor((window.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+          items.push({
+            type: "deal-match",
+            urgency: deal.percentOff >= 35 ? "high" : deal.percentOff >= 20 ? "medium" : "low",
+            daysAway,
+            message: `$${deal.price} ${deal.destination} fits your ${window.name} window`,
+            subMessage: `${daysAway} days away - ${deal.percentOff}% below typical`,
+            destination: deal.destination,
+            windowName: window.name,
+            deal
+          });
+        }
+      }
+    }
+    for (const window of upcomingWindows) {
+      const daysAway = Math.floor((window.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+      const hasPlannedTrip = trips.some((trip) => {
+        const tripDate = this.extractDate(trip.tripDates);
+        if (!tripDate)
+          return false;
+        return this.datesOverlap(tripDate, tripDate, window.startDate, window.endDate);
+      });
+      if (!hasPlannedTrip && daysAway <= 90) {
+        items.push({
+          type: "window-no-trip",
+          urgency: daysAway <= 30 ? "high" : daysAway <= 60 ? "medium" : "low",
+          daysAway,
+          message: `${window.name} window`,
+          subMessage: `${daysAway} days - NO TRIP PLANNED`,
+          windowName: window.name
+        });
+      }
+    }
+    return items.sort((a, b) => {
+      const urgencyOrder = { high: 0, medium: 1, low: 2 };
+      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
+        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+      }
+      return a.daysAway - b.daysAway;
+    });
+  }
+  /**
+   * Parse deal dates like "Feb 15-22" or "Mar 1-8"
+   */
+  parseDealDates(dateStr) {
+    if (!dateStr)
+      return null;
+    const monthNames = {
+      "jan": 0,
+      "feb": 1,
+      "mar": 2,
+      "apr": 3,
+      "may": 4,
+      "jun": 5,
+      "jul": 6,
+      "aug": 7,
+      "sep": 8,
+      "oct": 9,
+      "nov": 10,
+      "dec": 11
+    };
+    const year = (/* @__PURE__ */ new Date()).getFullYear();
+    const sameMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
+    if (sameMonthMatch) {
+      const month = monthNames[sameMonthMatch[1].toLowerCase()];
+      const startDay = parseInt(sameMonthMatch[2]);
+      const endDay = parseInt(sameMonthMatch[3]);
+      return {
+        start: new Date(year, month, startDay),
+        end: new Date(year, month, endDay)
+      };
+    }
+    const diffMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+    if (diffMonthMatch) {
+      const startMonth = monthNames[diffMonthMatch[1].toLowerCase()];
+      const startDay = parseInt(diffMonthMatch[2]);
+      const endMonth = monthNames[diffMonthMatch[3].toLowerCase()];
+      const endDay = parseInt(diffMonthMatch[4]);
+      return {
+        start: new Date(year, startMonth, startDay),
+        end: new Date(year, endMonth, endDay)
+      };
+    }
+    return null;
+  }
+  /**
+   * Check if two date ranges overlap
+   */
+  datesOverlap(start1, end1, start2, end2) {
+    return start1 <= end2 && end1 >= start2;
   }
   buildTrips(research, itineraries, gaps) {
     const tripMap = /* @__PURE__ */ new Map();

@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, DashboardData, TravelWindow, Milestone } from '../models/Trip';
+import { Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, DashboardData, TravelWindow, Milestone, ActionItem } from '../models/Trip';
 import { ResearchParser, ResearchData } from '../parsers/ResearchParser';
 import { ItineraryParser, ItineraryData } from '../parsers/ItineraryParser';
 import { PricingParser } from '../parsers/PricingParser';
@@ -17,11 +17,11 @@ export class DataService {
 
     // Paths relative to vault root
     private basePath = 'Personal/travel';
-    private researchPath = 'Personal/travel/01-research';
-    private itineraryPath = 'Personal/travel/02-itineraries';
-    private pricingPath = 'Personal/travel/00-source-material/pricing-snapshots';
-    private gapsPath = 'Personal/travel/04-gaps/questions.md';
-    private intelPath = 'Personal/travel/00-source-material/destination-intelligence.md';
+    private researchPath = 'Personal/travel/research';
+    private itineraryPath = 'Personal/travel/trips';
+    private pricingPath = 'Personal/travel/pricing/snapshots';
+    private gapsPath = 'Personal/travel/questions.md';
+    private intelPath = 'Personal/travel/pricing/destination-intelligence.md';
     private profilePath = 'Personal/travel/travel-profile.md';
     private inboxPath = '_inbox';
 
@@ -58,10 +58,15 @@ export class DataService {
         // Get next travel window (only if no committed trip)
         const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
 
+        // Build action items (deals matching windows, windows with no trip)
+        const actionItems = this.buildActionItems(travelWindows, discoveredDeals, trips);
+
         return {
             trips,
             committedTrip,
             nextWindow,
+            travelWindows,
+            actionItems,
             deadlines,
             milestones,
             prices,
@@ -69,6 +74,128 @@ export class DataService {
             discoveredDeals,
             lastRefresh: new Date(),
         };
+    }
+
+    /**
+     * Build action items: deals that match upcoming windows + windows with no planned trip
+     */
+    private buildActionItems(
+        windows: TravelWindow[],
+        discoveredDeals: DiscoveredDeal[],
+        trips: Trip[]
+    ): ActionItem[] {
+        const items: ActionItem[] = [];
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        // Filter to upcoming windows (next 120 days)
+        const upcomingWindows = windows.filter(w => {
+            const daysUntil = Math.floor((w.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return daysUntil > 0 && daysUntil <= 120;
+        });
+
+        // Check each deal for window matches
+        for (const deal of discoveredDeals) {
+            const dealDates = this.parseDealDates(deal.dates);
+            if (!dealDates) continue;
+
+            for (const window of upcomingWindows) {
+                if (this.datesOverlap(dealDates.start, dealDates.end, window.startDate, window.endDate)) {
+                    const daysAway = Math.floor((window.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                    items.push({
+                        type: 'deal-match',
+                        urgency: deal.percentOff >= 35 ? 'high' : deal.percentOff >= 20 ? 'medium' : 'low',
+                        daysAway,
+                        message: `$${deal.price} ${deal.destination} fits your ${window.name} window`,
+                        subMessage: `${daysAway} days away - ${deal.percentOff}% below typical`,
+                        destination: deal.destination,
+                        windowName: window.name,
+                        deal,
+                    });
+                }
+            }
+        }
+
+        // Check each upcoming window for planned trips
+        for (const window of upcomingWindows) {
+            const daysAway = Math.floor((window.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+            // Check if any trip is planned for this window
+            const hasPlannedTrip = trips.some(trip => {
+                const tripDate = this.extractDate(trip.tripDates);
+                if (!tripDate) return false;
+                return this.datesOverlap(tripDate, tripDate, window.startDate, window.endDate);
+            });
+
+            if (!hasPlannedTrip && daysAway <= 90) {
+                items.push({
+                    type: 'window-no-trip',
+                    urgency: daysAway <= 30 ? 'high' : daysAway <= 60 ? 'medium' : 'low',
+                    daysAway,
+                    message: `${window.name} window`,
+                    subMessage: `${daysAway} days - NO TRIP PLANNED`,
+                    windowName: window.name,
+                });
+            }
+        }
+
+        // Sort by urgency (high first), then by days away
+        return items.sort((a, b) => {
+            const urgencyOrder = { high: 0, medium: 1, low: 2 };
+            if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
+                return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+            }
+            return a.daysAway - b.daysAway;
+        });
+    }
+
+    /**
+     * Parse deal dates like "Feb 15-22" or "Mar 1-8"
+     */
+    private parseDealDates(dateStr: string): { start: Date; end: Date } | null {
+        if (!dateStr) return null;
+
+        const monthNames: Record<string, number> = {
+            'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+            'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+        };
+
+        const year = new Date().getFullYear();
+
+        // Pattern: "Feb 15-22"
+        const sameMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
+        if (sameMonthMatch) {
+            const month = monthNames[sameMonthMatch[1].toLowerCase()];
+            const startDay = parseInt(sameMonthMatch[2]);
+            const endDay = parseInt(sameMonthMatch[3]);
+            return {
+                start: new Date(year, month, startDay),
+                end: new Date(year, month, endDay)
+            };
+        }
+
+        // Pattern: "Feb 15 - Mar 2"
+        const diffMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
+        if (diffMonthMatch) {
+            const startMonth = monthNames[diffMonthMatch[1].toLowerCase()];
+            const startDay = parseInt(diffMonthMatch[2]);
+            const endMonth = monthNames[diffMonthMatch[3].toLowerCase()];
+            const endDay = parseInt(diffMonthMatch[4]);
+            return {
+                start: new Date(year, startMonth, startDay),
+                end: new Date(year, endMonth, endDay)
+            };
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if two date ranges overlap
+     */
+    private datesOverlap(start1: Date, end1: Date, start2: Date, end2: Date): boolean {
+        return start1 <= end2 && end1 >= start2;
     }
 
     private buildTrips(
