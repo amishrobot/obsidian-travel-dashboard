@@ -1,30 +1,55 @@
 /* ============================================
-   Travel Dashboard - Clean Professional Style
-   Inspired by Shopify's minimal dashboard design
+   Travel Dashboard - Shopify-Inspired Design
+   Bright white cards on subtle gray background
+   Clean, bold, professional
    ============================================ */
 
 .travel-dashboard {
-    /* Muted, professional color palette */
-    --travel-accent: #008060;
-    --travel-accent-hover: #006e52;
-    --travel-accent-muted: #f0fdf9;
+    /* Color palette - bold but refined */
+    --td-green: #008060;
+    --td-green-light: #f0fdf4;
+    --td-red: #d72c0d;
+    --td-red-light: #fef2f2;
+    --td-blue: #2c6ecb;
+    --td-blue-light: #f0f7ff;
+    --td-amber: #b98900;
+    --td-amber-light: #fffbeb;
+    --td-purple: #7c3aed;
 
-    --travel-success: #008060;
-    --travel-warning: #b98900;
-    --travel-danger: #d72c0d;
+    /* Surfaces */
+    --td-bg: #f6f6f7;
+    --td-card: #ffffff;
+    --td-border: #e3e5e7;
+    --td-border-hover: #c9cccf;
 
-    /* Neutral grays */
-    --border-color: #e1e3e5;
-    --border-color-hover: #c9cccf;
-    --bg-subtle: #f6f6f7;
-    --bg-card: var(--background-primary);
+    /* Text */
+    --td-text: #202223;
+    --td-text-secondary: #6d7175;
+    --td-text-muted: #8c9196;
 
-    /* Clean layout */
-    padding: 16px;
-    font-family: var(--font-interface);
+    /* Shadow */
+    --td-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05);
+    --td-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.05);
+
+    /* Layout */
+    padding: 20px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-y: auto;
     height: 100%;
-    background: var(--background-primary);
+    background: var(--td-bg);
+}
+
+/* Dark mode support */
+.theme-dark .travel-dashboard {
+    --td-bg: #1a1b1e;
+    --td-card: #25262b;
+    --td-border: #373a40;
+    --td-border-hover: #4a4d54;
+    --td-text: #f1f3f5;
+    --td-text-secondary: #adb5bd;
+    --td-text-muted: #868e96;
+    --td-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --td-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* ============================================
@@ -32,9 +57,9 @@
    ============================================ */
 .travel-loading {
     text-align: center;
-    padding: 40px;
-    color: var(--text-muted);
-    font-size: 13px;
+    padding: 60px 20px;
+    color: var(--td-text-muted);
+    font-size: 14px;
 }
 
 /* ============================================
@@ -44,34 +69,34 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
 }
 
 .dashboard-header h2 {
     margin: 0;
-    font-size: 14px;
+    font-size: 20px;
     font-weight: 600;
-    color: var(--text-normal);
-    letter-spacing: -0.01em;
+    color: var(--td-text);
+    letter-spacing: -0.02em;
 }
 
 .refresh-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    color: var(--td-text-secondary);
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     font-size: 14px;
+    box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .refresh-btn:hover {
-    background: var(--bg-subtle);
-    border-color: var(--border-color-hover);
-    color: var(--text-normal);
+    background: var(--td-card);
+    border-color: var(--td-border-hover);
+    color: var(--td-text);
+    box-shadow: var(--td-shadow-hover);
 }
 
 .refresh-btn.spinning {
@@ -87,43 +112,61 @@
    Section Styling
    ============================================ */
 .dashboard-section {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .dashboard-section h3 {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--text-muted);
-    margin: 0 0 12px 0;
+    color: var(--td-text-secondary);
+    margin: 0 0 12px 4px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
 }
 
 .empty-state {
-    color: var(--text-muted);
-    font-size: 13px;
-    padding: 20px;
+    color: var(--td-text-muted);
+    font-size: 14px;
+    padding: 32px 20px;
     text-align: center;
-    background: var(--bg-subtle);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: var(--td-card);
+    border: 1px dashed var(--td-border);
+    border-radius: 12px;
+}
+
+/* ============================================
+   Card Base Style
+   ============================================ */
+.card-base {
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
+}
+
+.card-base:hover {
+    border-color: var(--td-border-hover);
+    box-shadow: var(--td-shadow-hover);
 }
 
 /* ============================================
    Hero Section - Featured Trip
    ============================================ */
 .hero-section {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
 }
 
 .hero-section:hover {
-    border-color: var(--border-color-hover);
+    border-color: var(--td-border-hover);
+    box-shadow: var(--td-shadow-hover);
 }
 
 .hero-decoration {
@@ -138,45 +181,46 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 8px;
 }
 
 .hero-emoji {
-    font-size: 24px;
+    font-size: 28px;
 }
 
 .hero-destination-name {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-normal);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--td-text);
+    letter-spacing: -0.02em;
 }
 
 .hero-countdown {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--travel-accent);
+    color: var(--td-green);
     margin-bottom: 8px;
 }
 
 .hero-dates {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--td-text-secondary);
+    margin-bottom: 12px;
 }
 
 .hero-duration {
-    color: var(--text-faint);
+    color: var(--td-text-muted);
 }
 
 .hero-status {
     display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 3px 10px;
-    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
 }
 
 /* ============================================
@@ -186,18 +230,20 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 8px;
+    gap: 16px;
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
 }
 
 .travel-trip-card:hover {
-    border-color: var(--border-color-hover);
+    border-color: var(--td-border-hover);
+    box-shadow: var(--td-shadow-hover);
 }
 
 .trip-card-content {
@@ -212,89 +258,106 @@
 .trip-card-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 10px;
+    margin-bottom: 6px;
 }
 
 .trip-emoji {
-    font-size: 16px;
+    font-size: 20px;
 }
 
 .trip-name {
     font-weight: 600;
-    font-size: 14px;
-    color: var(--text-normal);
+    font-size: 15px;
+    color: var(--td-text);
 }
 
 .trip-dates {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-}
-
-.trip-duration {
-    color: var(--text-faint);
-}
-
-.trip-meta {
-    font-size: 12px;
-    color: var(--text-muted);
+    font-size: 13px;
+    color: var(--td-text-secondary);
     margin-bottom: 8px;
 }
 
+.trip-duration {
+    color: var(--td-text-muted);
+}
+
+.trip-meta {
+    font-size: 13px;
+    color: var(--td-text-muted);
+    margin-bottom: 10px;
+}
+
 /* ============================================
-   Status Badges - Clean flat style
+   Status Badges - Bold pill style
    ============================================ */
 .trip-status {
     display: inline-block;
     font-size: 11px;
-    font-weight: 500;
-    padding: 3px 8px;
-    border-radius: 4px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
 }
 
 .status-research {
-    background: #fef3cd;
-    color: #856404;
+    background: var(--td-amber-light);
+    color: var(--td-amber);
 }
 
 .status-planning {
-    background: #e8f4f8;
-    color: #0c5460;
+    background: var(--td-blue-light);
+    color: var(--td-blue);
 }
 
 .status-booked {
-    background: #d4edda;
-    color: #155724;
+    background: var(--td-green-light);
+    color: var(--td-green);
 }
 
 .status-traveling {
-    background: #d4edda;
-    color: #155724;
+    background: var(--td-green-light);
+    color: var(--td-green);
 }
 
 .status-complete {
-    background: var(--bg-subtle);
-    color: var(--text-muted);
+    background: #f3f4f6;
+    color: var(--td-text-muted);
+}
+
+.theme-dark .status-research {
+    background: rgba(185, 137, 0, 0.15);
+}
+
+.theme-dark .status-planning {
+    background: rgba(44, 110, 203, 0.15);
+}
+
+.theme-dark .status-booked,
+.theme-dark .status-traveling {
+    background: rgba(0, 128, 96, 0.15);
+}
+
+.theme-dark .status-complete {
+    background: rgba(134, 142, 150, 0.15);
 }
 
 /* ============================================
-   Progress Ring - Simple style
+   Progress Ring
    ============================================ */
 .progress-ring {
     transform: rotate(-90deg);
 }
 
 .progress-ring-bg {
-    stroke: var(--border-color);
+    stroke: var(--td-border);
     stroke-width: 4;
     fill: none;
 }
 
 .progress-ring-fill {
-    stroke: var(--travel-accent);
+    stroke: var(--td-green);
     stroke-width: 4;
     stroke-linecap: round;
     fill: none;
@@ -302,9 +365,9 @@
 }
 
 .progress-ring-text {
-    font-size: 10px;
-    font-weight: 600;
-    fill: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--td-text);
     text-anchor: middle;
     dominant-baseline: central;
     transform: rotate(90deg);
@@ -315,29 +378,31 @@
    Urgent Warning
    ============================================ */
 .trip-urgent {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--travel-warning);
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--td-red);
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 /* ============================================
    Timeline Deadlines
    ============================================ */
 .deadline-timeline {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: var(--td-shadow);
 }
 
 .timeline-item {
     display: flex;
     align-items: flex-start;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--td-border);
     transition: background 0.1s ease;
 }
 
@@ -346,45 +411,49 @@
 }
 
 .timeline-item:hover {
-    background: var(--bg-subtle);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.theme-dark .timeline-item:hover {
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .timeline-connector {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 12px;
+    margin-right: 14px;
 }
 
 .timeline-node {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: var(--bg-card);
-    border: 2px solid var(--text-muted);
+    background: var(--td-card);
+    border: 3px solid var(--td-text-muted);
     flex-shrink: 0;
 }
 
 .timeline-line {
-    width: 1px;
+    width: 2px;
     flex: 1;
     min-height: 20px;
-    background: var(--border-color);
+    background: var(--td-border);
     margin-top: 4px;
 }
 
 .node-urgent {
-    border-color: var(--travel-danger);
-    background: var(--travel-danger);
+    border-color: var(--td-red);
+    background: var(--td-red);
 }
 
 .node-soon {
-    border-color: var(--travel-warning);
-    background: var(--travel-warning);
+    border-color: var(--td-amber);
+    background: var(--td-amber);
 }
 
 .node-upcoming {
-    border-color: var(--travel-success);
+    border-color: var(--td-green);
     background: transparent;
 }
 
@@ -394,109 +463,117 @@
 }
 
 .timeline-date {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--td-text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    margin-bottom: 2px;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
 }
 
 .timeline-item:has(.node-urgent) .timeline-date {
-    color: var(--travel-danger);
+    color: var(--td-red);
 }
 
 .timeline-item:has(.node-soon) .timeline-date {
-    color: var(--travel-warning);
+    color: var(--td-amber);
 }
 
 .timeline-desc {
-    font-size: 13px;
-    color: var(--text-normal);
-    line-height: 1.4;
+    font-size: 14px;
+    color: var(--td-text);
+    line-height: 1.5;
 }
 
 /* ============================================
    Price Tracker Cards
    ============================================ */
 .price-tracker-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 8px;
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 10px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
 }
 
 .price-tracker-card:hover {
-    border-color: var(--border-color-hover);
+    border-color: var(--td-border-hover);
+    box-shadow: var(--td-shadow-hover);
 }
 
 .price-header {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .price-route {
     font-weight: 600;
-    font-size: 13px;
-    color: var(--text-normal);
+    font-size: 14px;
+    color: var(--td-text);
 }
 
 .price-amount {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-normal);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--td-text);
     margin-bottom: 4px;
+    letter-spacing: -0.02em;
 }
 
 .price-total {
-    color: var(--text-muted);
-    font-size: 12px;
+    color: var(--td-text-muted);
+    font-size: 13px;
     font-weight: 400;
 }
 
 .price-status {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 4px;
+    font-size: 13px;
+    color: var(--td-text-secondary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .price-trend-rising {
-    color: var(--travel-danger);
-    font-weight: 500;
+    color: var(--td-red);
+    font-weight: 600;
 }
 
 .price-trend-falling {
-    color: var(--travel-success);
-    font-weight: 500;
+    color: var(--td-green);
+    font-weight: 600;
 }
 
 .price-updated {
-    font-size: 11px;
-    color: var(--text-faint);
-    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--td-text-muted);
+    margin-bottom: 14px;
 }
 
 .price-updated .stale {
-    color: var(--travel-warning);
+    color: var(--td-amber);
+    font-weight: 500;
 }
 
 .price-check-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--travel-accent);
+    background: var(--td-green);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
     cursor: pointer;
     transition: all 0.15s ease;
+    width: 100%;
 }
 
 .price-check-btn:hover {
-    background: var(--travel-accent-muted);
-    border-color: var(--travel-accent);
+    background: #006e52;
+    transform: translateY(-1px);
 }
 
 /* ============================================
@@ -505,77 +582,77 @@
 .action-button-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 10px;
 }
 
 .action-btn {
-    background: transparent;
-    color: var(--text-normal);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 10px 8px;
-    font-size: 12px;
-    font-weight: 500;
+    background: var(--td-card);
+    color: var(--td-text);
+    border: 1px solid var(--td-border);
+    border-radius: 10px;
+    padding: 14px 12px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
+    box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
     text-align: center;
 }
 
 .action-btn:hover {
-    background: var(--bg-subtle);
-    border-color: var(--border-color-hover);
+    border-color: var(--td-blue);
+    color: var(--td-blue);
+    box-shadow: var(--td-shadow-hover);
+    transform: translateY(-1px);
 }
 
 /* ============================================
    Deal Cards
    ============================================ */
 .deal-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
-    position: relative;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
 }
 
 .deal-card:hover {
-    border-color: var(--border-color-hover);
-}
-
-.deal-card::after {
-    content: none;
+    border-color: var(--td-border-hover);
+    box-shadow: var(--td-shadow-hover);
 }
 
 .deal-header {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .deal-destination {
     font-weight: 600;
-    font-size: 13px;
-    color: var(--text-normal);
+    font-size: 15px;
+    color: var(--td-text);
 }
 
 .deal-info {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 2px;
+    font-size: 13px;
+    color: var(--td-text-secondary);
+    margin-bottom: 4px;
 }
 
 .deal-pricing {
-    font-size: 12px;
-    color: var(--text-muted);
+    font-size: 13px;
+    color: var(--td-text-muted);
 }
 
 .deal-threshold {
-    color: var(--travel-success);
-    font-weight: 500;
+    color: var(--td-green);
+    font-weight: 600;
 }
 
 /* ============================================
-   Scrollbar - Minimal
+   Scrollbar - Subtle
    ============================================ */
 .travel-dashboard::-webkit-scrollbar {
     width: 8px;
@@ -586,12 +663,12 @@
 }
 
 .travel-dashboard::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: var(--td-border);
     border-radius: 4px;
 }
 
 .travel-dashboard::-webkit-scrollbar-thumb:hover {
-    background: var(--border-color-hover);
+    background: var(--td-border-hover);
 }
 
 /* ============================================
@@ -604,7 +681,7 @@
 .refresh-btn:focus-visible,
 .price-check-btn:focus-visible,
 .hero-section:focus-visible {
-    outline: 2px solid var(--travel-accent);
+    outline: 2px solid var(--td-blue);
     outline-offset: 2px;
 }
 
