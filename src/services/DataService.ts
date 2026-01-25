@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { Trip, Deadline, PriceSnapshot, Deal, DashboardData } from '../models/Trip';
 import { ResearchParser, ResearchData } from '../parsers/ResearchParser';
 import { ItineraryParser, ItineraryData } from '../parsers/ItineraryParser';
@@ -20,7 +20,6 @@ export class DataService {
     private pricingPath = 'Personal/travel/00-source-material/pricing-snapshots';
     private gapsPath = 'Personal/travel/04-gaps/questions.md';
     private intelPath = 'Personal/travel/00-source-material/destination-intelligence.md';
-    private profilePath = 'Personal/travel/travel-profile.md';
 
     constructor(private app: App) {
         this.researchParser = new ResearchParser(app);
@@ -262,22 +261,25 @@ export class DataService {
     }
 
     private extractDate(dateStr: string): Date | null {
-        // Try various date formats
-        const patterns = [
-            /(\w+)\s+(\d+)(?:\s*-\s*\d+)?,?\s*(\d{4})/i, // "June 27-July 5, 2026"
-            /(\d{4})-(\d{2})-(\d{2})/, // "2026-06-27"
-        ];
+        // Try ISO format first: "2026-06-27"
+        const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const date = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+            if (!isNaN(date.getTime())) return date;
+        }
 
-        for (const pattern of patterns) {
-            const match = dateStr.match(pattern);
-            if (match) {
-                try {
-                    return new Date(dateStr);
-                } catch {
-                    continue;
-                }
+        // Try "Month Day, Year" format: "June 27-July 5, 2026" or "June 27, 2026"
+        const monthMatch = dateStr.match(/(\w+)\s+(\d+)(?:\s*-\s*\w*\s*\d+)?,?\s*(\d{4})/i);
+        if (monthMatch) {
+            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                'july', 'august', 'september', 'october', 'november', 'december'];
+            const monthIndex = monthNames.indexOf(monthMatch[1].toLowerCase());
+            if (monthIndex !== -1) {
+                const date = new Date(parseInt(monthMatch[3]), monthIndex, parseInt(monthMatch[2]));
+                if (!isNaN(date.getTime())) return date;
             }
         }
+
         return null;
     }
 

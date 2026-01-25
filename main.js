@@ -52,10 +52,13 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
     }
-    this.refreshTimeout = setTimeout(async () => {
-      this.data = await this.plugin.dataService.loadAll();
-      this.render();
-    }, 100);
+    return new Promise((resolve) => {
+      this.refreshTimeout = setTimeout(async () => {
+        this.data = await this.plugin.dataService.loadAll();
+        this.render();
+        resolve();
+      }, 100);
+    });
   }
   render() {
     const container = this.containerEl.children[1];
@@ -297,9 +300,13 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       });
     }
   }
-  copyCommand(command) {
-    navigator.clipboard.writeText(command);
-    new import_obsidian.Notice(`Copied: ${command}`);
+  async copyCommand(command) {
+    try {
+      await navigator.clipboard.writeText(command);
+      new import_obsidian.Notice(`Copied: ${command}`);
+    } catch (e) {
+      new import_obsidian.Notice(`Failed to copy command`);
+    }
   }
 };
 
@@ -600,18 +607,6 @@ var GapsParser = class {
     }
     return gaps;
   }
-  extractUrgentDeadlines(gaps) {
-    const now = /* @__PURE__ */ new Date();
-    return gaps.filter((g) => g.priority === "urgent" && !g.checked).map((g, i) => ({
-      id: `gap-${i}`,
-      destination: g.destination,
-      description: g.question,
-      date: "ASAP",
-      daysRemaining: 0,
-      priority: "urgent",
-      source: "gaps"
-    }));
-  }
 };
 
 // src/parsers/DealsParser.ts
@@ -714,7 +709,6 @@ var DataService = class {
     this.pricingPath = "Personal/travel/00-source-material/pricing-snapshots";
     this.gapsPath = "Personal/travel/04-gaps/questions.md";
     this.intelPath = "Personal/travel/00-source-material/destination-intelligence.md";
-    this.profilePath = "Personal/travel/travel-profile.md";
     this.researchParser = new ResearchParser(app);
     this.itineraryParser = new ItineraryParser(app);
     this.pricingParser = new PricingParser(app);
@@ -919,20 +913,33 @@ var DataService = class {
     return 0;
   }
   extractDate(dateStr) {
-    const patterns = [
-      /(\w+)\s+(\d+)(?:\s*-\s*\d+)?,?\s*(\d{4})/i,
-      // "June 27-July 5, 2026"
-      /(\d{4})-(\d{2})-(\d{2})/
-      // "2026-06-27"
-    ];
-    for (const pattern of patterns) {
-      const match = dateStr.match(pattern);
-      if (match) {
-        try {
-          return new Date(dateStr);
-        } catch (e) {
-          continue;
-        }
+    const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const date = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+      if (!isNaN(date.getTime()))
+        return date;
+    }
+    const monthMatch = dateStr.match(/(\w+)\s+(\d+)(?:\s*-\s*\w*\s*\d+)?,?\s*(\d{4})/i);
+    if (monthMatch) {
+      const monthNames = [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december"
+      ];
+      const monthIndex = monthNames.indexOf(monthMatch[1].toLowerCase());
+      if (monthIndex !== -1) {
+        const date = new Date(parseInt(monthMatch[3]), monthIndex, parseInt(monthMatch[2]));
+        if (!isNaN(date.getTime()))
+          return date;
       }
     }
     return null;
@@ -951,6 +958,10 @@ var DataService = class {
 
 // src/main.ts
 var TravelDashboardPlugin = class extends import_obsidian4.Plugin {
+  constructor() {
+    super(...arguments);
+    this.refreshTimeout = null;
+  }
   async onload() {
     console.log("Loading Travel Dashboard plugin");
     this.dataService = new DataService(this.app);
@@ -1004,12 +1015,17 @@ var TravelDashboardPlugin = class extends import_obsidian4.Plugin {
     }
   }
   async refreshDashboard() {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TRAVEL_DASHBOARD);
-    for (const leaf of leaves) {
-      const view = leaf.view;
-      if (view && view.refresh) {
-        setTimeout(() => view.refresh(), 500);
-      }
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
     }
+    this.refreshTimeout = setTimeout(() => {
+      const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TRAVEL_DASHBOARD);
+      for (const leaf of leaves) {
+        const view = leaf.view;
+        if (view && view.refresh) {
+          view.refresh();
+        }
+      }
+    }, 500);
   }
 };

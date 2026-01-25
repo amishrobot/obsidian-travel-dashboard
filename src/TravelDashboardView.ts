@@ -34,16 +34,19 @@ export class TravelDashboardView extends ItemView {
         // Cleanup
     }
 
-    async refresh() {
+    async refresh(): Promise<void> {
         // Debounce multiple rapid refreshes
         if (this.refreshTimeout) {
             clearTimeout(this.refreshTimeout);
         }
 
-        this.refreshTimeout = setTimeout(async () => {
-            this.data = await this.plugin.dataService.loadAll();
-            this.render();
-        }, 100);
+        return new Promise((resolve) => {
+            this.refreshTimeout = setTimeout(async () => {
+                this.data = await this.plugin.dataService.loadAll();
+                this.render();
+                resolve();
+            }, 100);
+        });
     }
 
     render() {
@@ -347,8 +350,12 @@ export class TravelDashboardView extends ItemView {
         }
     }
 
-    private copyCommand(command: string) {
-        navigator.clipboard.writeText(command);
-        new Notice(`Copied: ${command}`);
+    private async copyCommand(command: string) {
+        try {
+            await navigator.clipboard.writeText(command);
+            new Notice(`Copied: ${command}`);
+        } catch {
+            new Notice(`Failed to copy command`);
+        }
     }
 }

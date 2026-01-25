@@ -1,5 +1,4 @@
 import { App, TFile } from 'obsidian';
-import { Deadline } from '../models/Trip';
 
 export interface GapItem {
     destination: string;
@@ -59,18 +58,4 @@ export class GapsParser {
         return gaps;
     }
 
-    extractUrgentDeadlines(gaps: GapItem[]): Deadline[] {
-        const now = new Date();
-        return gaps
-            .filter(g => g.priority === 'urgent' && !g.checked)
-            .map((g, i) => ({
-                id: `gap-${i}`,
-                destination: g.destination,
-                description: g.question,
-                date: 'ASAP',
-                daysRemaining: 0,
-                priority: 'urgent' as const,
-                source: 'gaps',
-            }));
-    }
 }
