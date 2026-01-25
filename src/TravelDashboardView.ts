@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import TravelDashboardPlugin from './main';
-import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, TravelWindow } from './models/Trip';
+import { DashboardData, Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, TravelWindow, Milestone } from './models/Trip';
 
 export const VIEW_TYPE_TRAVEL_DASHBOARD = 'travel-dashboard-view';
 
@@ -64,6 +64,9 @@ export class TravelDashboardView extends ItemView {
 
         // Hero Section (next upcoming trip with countdown)
         this.renderHeroSection(container);
+
+        // Milestones (personal important dates)
+        this.renderMilestonesSection(container);
 
         // Researching (trips in progress)
         this.renderTripsSection(container);
@@ -220,6 +223,56 @@ export class TravelDashboardView extends ItemView {
         if (window.isTopPick) {
             const badgeEl = content.createDiv({ cls: 'hero-status status-booked' });
             badgeEl.createSpan({ text: '⭐ TOP PICK' });
+        }
+    }
+
+    private renderMilestonesSection(container: Element) {
+        const milestones = this.data?.milestones || [];
+
+        // Only show milestones within the next 60 days
+        const upcoming = milestones.filter(m => m.daysUntil <= 60);
+
+        if (!upcoming.length) return;
+
+        const section = container.createDiv({ cls: 'dashboard-section milestones-section' });
+        section.createEl('h3', { text: 'COMING UP' });
+
+        const grid = section.createDiv({ cls: 'milestones-grid' });
+
+        for (const milestone of upcoming) {
+            const card = grid.createDiv({ cls: 'milestone-card' });
+
+            // Emoji and name
+            const header = card.createDiv({ cls: 'milestone-header' });
+            header.createSpan({ text: milestone.emoji, cls: 'milestone-emoji' });
+            header.createSpan({ text: milestone.name, cls: 'milestone-name' });
+
+            // Days until
+            const countdown = card.createDiv({ cls: 'milestone-countdown' });
+            if (milestone.daysUntil === 0) {
+                countdown.createSpan({ text: 'Today!', cls: 'milestone-today' });
+            } else if (milestone.daysUntil === 1) {
+                countdown.createSpan({ text: 'Tomorrow!' });
+            } else {
+                countdown.createSpan({ text: `${milestone.daysUntil} days` });
+            }
+
+            // Date
+            const dateEl = card.createDiv({ cls: 'milestone-date' });
+            dateEl.createSpan({ text: milestone.date });
+
+            // Trip ideas (if any)
+            if (milestone.tripIdeas) {
+                const ideas = card.createDiv({ cls: 'milestone-ideas' });
+                ideas.createSpan({ text: milestone.tripIdeas });
+            }
+
+            // Urgency styling
+            if (milestone.daysUntil <= 14) {
+                card.addClass('milestone-urgent');
+            } else if (milestone.daysUntil <= 30) {
+                card.addClass('milestone-soon');
+            }
         }
     }
 

@@ -70,6 +70,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     }
     this.renderHeader(container);
     this.renderHeroSection(container);
+    this.renderMilestonesSection(container);
     this.renderTripsSection(container);
     this.renderDealsSection(container);
     this.renderDeadlinesSection(container);
@@ -179,6 +180,41 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     if (window.isTopPick) {
       const badgeEl = content.createDiv({ cls: "hero-status status-booked" });
       badgeEl.createSpan({ text: "\u2B50 TOP PICK" });
+    }
+  }
+  renderMilestonesSection(container) {
+    var _a;
+    const milestones = ((_a = this.data) == null ? void 0 : _a.milestones) || [];
+    const upcoming = milestones.filter((m) => m.daysUntil <= 60);
+    if (!upcoming.length)
+      return;
+    const section = container.createDiv({ cls: "dashboard-section milestones-section" });
+    section.createEl("h3", { text: "COMING UP" });
+    const grid = section.createDiv({ cls: "milestones-grid" });
+    for (const milestone of upcoming) {
+      const card = grid.createDiv({ cls: "milestone-card" });
+      const header = card.createDiv({ cls: "milestone-header" });
+      header.createSpan({ text: milestone.emoji, cls: "milestone-emoji" });
+      header.createSpan({ text: milestone.name, cls: "milestone-name" });
+      const countdown = card.createDiv({ cls: "milestone-countdown" });
+      if (milestone.daysUntil === 0) {
+        countdown.createSpan({ text: "Today!", cls: "milestone-today" });
+      } else if (milestone.daysUntil === 1) {
+        countdown.createSpan({ text: "Tomorrow!" });
+      } else {
+        countdown.createSpan({ text: `${milestone.daysUntil} days` });
+      }
+      const dateEl = card.createDiv({ cls: "milestone-date" });
+      dateEl.createSpan({ text: milestone.date });
+      if (milestone.tripIdeas) {
+        const ideas = card.createDiv({ cls: "milestone-ideas" });
+        ideas.createSpan({ text: milestone.tripIdeas });
+      }
+      if (milestone.daysUntil <= 14) {
+        card.addClass("milestone-urgent");
+      } else if (milestone.daysUntil <= 30) {
+        card.addClass("milestone-soon");
+      }
     }
   }
   findHeroTrip(trips) {
@@ -1235,6 +1271,7 @@ var DataService = class {
     const trips = this.buildTrips(research, itineraries, gaps);
     const deadlines = this.buildDeadlines(itineraries, gaps, prices);
     const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
+    const milestones = await this.parseMilestones();
     const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates))[0] || null;
     const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
     return {
@@ -1242,6 +1279,7 @@ var DataService = class {
       committedTrip,
       nextWindow,
       deadlines,
+      milestones,
       prices,
       deals,
       discoveredDeals,
@@ -1471,6 +1509,86 @@ var DataService = class {
     } catch (e) {
       return 30;
     }
+  }
+  /**
+   * Parse Important Dates from travel-profile.md
+   * Expected format:
+   * | Date | Occasion | Trip Ideas |
+   * |------|----------|------------|
+   * | **Feb 9** | Adrienne Day | Romantic getaway |
+   */
+  async parseMilestones() {
+    const milestones = [];
+    try {
+      const file = this.app.vault.getAbstractFileByPath(this.profilePath);
+      if (!file || !("extension" in file))
+        return milestones;
+      const content = await this.app.vault.read(file);
+      const importantDatesMatch = content.match(/## Important Dates[\s\S]*?\n\n/);
+      if (!importantDatesMatch)
+        return milestones;
+      const section = importantDatesMatch[0];
+      const rowRegex = /\|\s*\*?\*?([A-Za-z]+\s+\d+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\s*\|/g;
+      let match;
+      const monthMap = {
+        "jan": 0,
+        "feb": 1,
+        "mar": 2,
+        "apr": 3,
+        "may": 4,
+        "jun": 5,
+        "jul": 6,
+        "aug": 7,
+        "sep": 8,
+        "oct": 9,
+        "nov": 10,
+        "dec": 11
+      };
+      const emojiMap = {
+        "adrienne day": "\u{1F495}",
+        "anniversary": "\u{1F48D}",
+        "birthday": "\u{1F382}"
+      };
+      while ((match = rowRegex.exec(section)) !== null) {
+        const dateStr = match[1].trim();
+        const occasion = match[2].trim();
+        const tripIdeas = match[3].trim();
+        const dateMatch = dateStr.match(/([A-Za-z]+)\s+(\d+)/);
+        if (!dateMatch)
+          continue;
+        const monthStr = dateMatch[1].toLowerCase().substring(0, 3);
+        const day = parseInt(dateMatch[2]);
+        const month = monthMap[monthStr];
+        if (month === void 0 || isNaN(day))
+          continue;
+        const now = /* @__PURE__ */ new Date();
+        const currentYear = now.getFullYear();
+        let targetDate = new Date(currentYear, month, day);
+        if (targetDate < now) {
+          targetDate = new Date(currentYear + 1, month, day);
+        }
+        const daysUntil = Math.floor((targetDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+        let emoji = "\u{1F389}";
+        for (const [key, value] of Object.entries(emojiMap)) {
+          if (occasion.toLowerCase().includes(key)) {
+            emoji = value;
+            break;
+          }
+        }
+        milestones.push({
+          id: `milestone-${occasion.toLowerCase().replace(/\s+/g, "-")}`,
+          name: occasion,
+          date: dateStr,
+          monthDay: [month, day],
+          tripIdeas: tripIdeas || void 0,
+          daysUntil,
+          emoji
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing milestones:", e);
+    }
+    return milestones.sort((a, b) => a.daysUntil - b.daysUntil);
   }
 };
 

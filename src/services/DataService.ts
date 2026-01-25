@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, DashboardData, TravelWindow } from '../models/Trip';
+import { Trip, Deadline, PriceSnapshot, Deal, DiscoveredDeal, DashboardData, TravelWindow, Milestone } from '../models/Trip';
 import { ResearchParser, ResearchData } from '../parsers/ResearchParser';
 import { ItineraryParser, ItineraryData } from '../parsers/ItineraryParser';
 import { PricingParser } from '../parsers/PricingParser';
@@ -48,6 +48,7 @@ export class DataService {
         const trips = this.buildTrips(research, itineraries, gaps);
         const deadlines = this.buildDeadlines(itineraries, gaps, prices);
         const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
+        const milestones = await this.parseMilestones();
 
         // Find committed trip (soonest by date)
         const committedTrip = trips
@@ -62,6 +63,7 @@ export class DataService {
             committedTrip,
             nextWindow,
             deadlines,
+            milestones,
             prices,
             deals,
             discoveredDeals,
@@ -314,5 +316,97 @@ export class DataService {
         } catch {
             return 30; // Default if can't parse
         }
+    }
+
+    /**
+     * Parse Important Dates from travel-profile.md
+     * Expected format:
+     * | Date | Occasion | Trip Ideas |
+     * |------|----------|------------|
+     * | **Feb 9** | Adrienne Day | Romantic getaway |
+     */
+    private async parseMilestones(): Promise<Milestone[]> {
+        const milestones: Milestone[] = [];
+
+        try {
+            const file = this.app.vault.getAbstractFileByPath(this.profilePath);
+            if (!file || !('extension' in file)) return milestones;
+
+            const content = await this.app.vault.read(file as any);
+
+            // Find Important Dates section
+            const importantDatesMatch = content.match(/## Important Dates[\s\S]*?\n\n/);
+            if (!importantDatesMatch) return milestones;
+
+            const section = importantDatesMatch[0];
+
+            // Parse markdown table rows
+            // Match rows like: | **Feb 9** | Adrienne Day | Romantic getaway |
+            const rowRegex = /\|\s*\*?\*?([A-Za-z]+\s+\d+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\s*\|/g;
+            let match;
+
+            const monthMap: Record<string, number> = {
+                'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+                'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+            };
+
+            const emojiMap: Record<string, string> = {
+                'adrienne day': '💕',
+                'anniversary': '💍',
+                'birthday': '🎂',
+            };
+
+            while ((match = rowRegex.exec(section)) !== null) {
+                const dateStr = match[1].trim();  // e.g., "Feb 9"
+                const occasion = match[2].trim();  // e.g., "Adrienne Day"
+                const tripIdeas = match[3].trim(); // e.g., "Romantic getaway"
+
+                // Parse month and day
+                const dateMatch = dateStr.match(/([A-Za-z]+)\s+(\d+)/);
+                if (!dateMatch) continue;
+
+                const monthStr = dateMatch[1].toLowerCase().substring(0, 3);
+                const day = parseInt(dateMatch[2]);
+                const month = monthMap[monthStr];
+
+                if (month === undefined || isNaN(day)) continue;
+
+                // Calculate days until (accounting for year wrap)
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                let targetDate = new Date(currentYear, month, day);
+
+                // If date has passed this year, use next year
+                if (targetDate < now) {
+                    targetDate = new Date(currentYear + 1, month, day);
+                }
+
+                const daysUntil = Math.floor((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                // Find emoji based on occasion
+                let emoji = '🎉';
+                for (const [key, value] of Object.entries(emojiMap)) {
+                    if (occasion.toLowerCase().includes(key)) {
+                        emoji = value;
+                        break;
+                    }
+                }
+
+                milestones.push({
+                    id: `milestone-${occasion.toLowerCase().replace(/\s+/g, '-')}`,
+                    name: occasion,
+                    date: dateStr,
+                    monthDay: [month, day],
+                    tripIdeas: tripIdeas || undefined,
+                    daysUntil,
+                    emoji,
+                });
+            }
+        } catch (e) {
+            console.error('Error parsing milestones:', e);
+        }
+
+        // Sort by days until
+        return milestones.sort((a, b) => a.daysUntil - b.daysUntil);
     }
 }

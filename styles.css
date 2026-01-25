@@ -238,6 +238,95 @@
 }
 
 /* ============================================
+   Milestones (Personal Important Dates)
+   ============================================ */
+.milestones-section {
+    margin-bottom: 20px;
+}
+
+.milestones-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.milestone-card {
+    background: var(--td-card);
+    border: 1px solid var(--td-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--td-shadow);
+    transition: all 0.15s ease;
+}
+
+.milestone-card:hover {
+    box-shadow: var(--td-shadow-hover);
+}
+
+.milestone-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.milestone-emoji {
+    font-size: 16px;
+}
+
+.milestone-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--td-text);
+    letter-spacing: -0.01em;
+}
+
+.milestone-countdown {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--td-text);
+    margin-bottom: 2px;
+    letter-spacing: -0.02em;
+}
+
+.milestone-today {
+    color: var(--td-red);
+}
+
+.milestone-date {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--td-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.milestone-ideas {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--td-text-secondary);
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* Urgency states */
+.milestone-urgent {
+    border-left: 3px solid var(--td-red);
+}
+
+.milestone-urgent .milestone-countdown {
+    color: var(--td-red);
+}
+
+.milestone-soon {
+    border-left: 3px solid var(--td-amber);
+}
+
+.milestone-soon .milestone-countdown {
+    color: var(--td-amber);
+}
+
+/* ============================================
    Trip Cards
    ============================================ */
 .travel-trip-card {

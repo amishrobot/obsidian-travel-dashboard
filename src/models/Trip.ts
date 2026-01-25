@@ -37,6 +37,16 @@ export interface Deadline {
     source: string;
 }
 
+export interface Milestone {
+    id: string;
+    name: string;           // e.g., "Adrienne Day", "Anniversary"
+    date: string;           // e.g., "Feb 9"
+    monthDay: number[];     // [month, day] for calculation
+    tripIdeas?: string;     // e.g., "Romantic getaway"
+    daysUntil: number;
+    emoji: string;
+}
+
 export interface PriceSnapshot {
     destination: string;
     route: string;
@@ -76,6 +86,7 @@ export interface DashboardData {
     committedTrip: Trip | null;
     nextWindow: TravelWindow | null;
     deadlines: Deadline[];
+    milestones: Milestone[];
     prices: PriceSnapshot[];
     deals: Deal[];
     discoveredDeals: DiscoveredDeal[];
