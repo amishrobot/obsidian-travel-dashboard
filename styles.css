@@ -1,102 +1,111 @@
 /* ============================================
    Travel Dashboard - Shopify-Inspired Design
-   Bright white cards on subtle gray background
-   Clean, bold, professional
+   Clean typography, bright cards, refined colors
    ============================================ */
 
 .travel-dashboard {
-    /* Color palette - bold but refined */
+    /* Color palette */
     --td-green: #008060;
-    --td-green-light: #f0fdf4;
+    --td-green-light: #e6f4f1;
     --td-red: #d72c0d;
     --td-red-light: #fef2f2;
     --td-blue: #2c6ecb;
-    --td-blue-light: #f0f7ff;
+    --td-blue-light: #ebf3fc;
     --td-amber: #b98900;
-    --td-amber-light: #fffbeb;
-    --td-purple: #7c3aed;
+    --td-amber-light: #fef8e8;
 
     /* Surfaces */
     --td-bg: #f6f6f7;
     --td-card: #ffffff;
-    --td-border: #e3e5e7;
-    --td-border-hover: #c9cccf;
+    --td-border: #e1e3e5;
+    --td-border-hover: #babfc4;
 
-    /* Text */
-    --td-text: #202223;
-    --td-text-secondary: #6d7175;
-    --td-text-muted: #8c9196;
+    /* Text - refined grayscale */
+    --td-text: #1a1a1a;
+    --td-text-secondary: #5c5f62;
+    --td-text-muted: #8a8a8a;
 
-    /* Shadow */
-    --td-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05);
-    --td-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.05);
+    /* Shadows */
+    --td-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --td-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    /* Typography */
+    --td-font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    --td-font-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
 
     /* Layout */
     padding: 20px 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--td-font);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-y: auto;
     height: 100%;
     background: var(--td-bg);
 }
 
-/* Dark mode support */
+/* Dark mode */
 .theme-dark .travel-dashboard {
-    --td-bg: #1a1b1e;
-    --td-card: #25262b;
-    --td-border: #373a40;
-    --td-border-hover: #4a4d54;
-    --td-text: #f1f3f5;
-    --td-text-secondary: #adb5bd;
-    --td-text-muted: #868e96;
-    --td-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --td-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --td-bg: #161618;
+    --td-card: #202124;
+    --td-border: #303134;
+    --td-border-hover: #3c4043;
+    --td-text: #e8eaed;
+    --td-text-secondary: #9aa0a6;
+    --td-text-muted: #6e6e6e;
+    --td-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --td-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --td-green-light: rgba(0, 128, 96, 0.12);
+    --td-blue-light: rgba(44, 110, 203, 0.12);
+    --td-amber-light: rgba(185, 137, 0, 0.12);
+    --td-red-light: rgba(215, 44, 13, 0.12);
 }
 
 /* ============================================
-   Loading State
+   Loading
    ============================================ */
 .travel-loading {
     text-align: center;
     padding: 60px 20px;
     color: var(--td-text-muted);
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 /* ============================================
-   Dashboard Header
+   Header
    ============================================ */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
 }
 
 .dashboard-header h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--td-text);
-    letter-spacing: -0.02em;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
 }
 
 .refresh-btn {
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    color: var(--td-text-secondary);
+    color: var(--td-text-muted);
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     font-size: 14px;
-    box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .refresh-btn:hover {
-    background: var(--td-card);
     border-color: var(--td-border-hover);
-    color: var(--td-text);
-    box-shadow: var(--td-shadow-hover);
+    color: var(--td-text-secondary);
 }
 
 .refresh-btn.spinning {
@@ -109,68 +118,47 @@
 }
 
 /* ============================================
-   Section Styling
+   Sections
    ============================================ */
 .dashboard-section {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 
 .dashboard-section h3 {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--td-text-secondary);
-    margin: 0 0 12px 4px;
+    color: var(--td-text-muted);
+    margin: 0 0 10px 2px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 
 .empty-state {
     color: var(--td-text-muted);
-    font-size: 14px;
-    padding: 32px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 28px 20px;
     text-align: center;
     background: var(--td-card);
     border: 1px dashed var(--td-border);
-    border-radius: 12px;
+    border-radius: 10px;
 }
 
 /* ============================================
-   Card Base Style
-   ============================================ */
-.card-base {
-    background: var(--td-card);
-    border: 1px solid var(--td-border);
-    border-radius: 12px;
-    box-shadow: var(--td-shadow);
-    transition: all 0.15s ease;
-}
-
-.card-base:hover {
-    border-color: var(--td-border-hover);
-    box-shadow: var(--td-shadow-hover);
-}
-
-/* ============================================
-   Hero Section - Featured Trip
+   Hero Section
    ============================================ */
 .hero-section {
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-    cursor: pointer;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
     box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .hero-section:hover {
-    border-color: var(--td-border-hover);
     box-shadow: var(--td-shadow-hover);
-}
-
-.hero-decoration {
-    display: none;
 }
 
 .hero-content {
@@ -181,69 +169,72 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 
 .hero-emoji {
-    font-size: 28px;
+    font-size: 24px;
 }
 
 .hero-destination-name {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 600;
     color: var(--td-text);
     letter-spacing: -0.02em;
 }
 
 .hero-countdown {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--td-green);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .hero-dates {
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--td-text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .hero-duration {
+    font-weight: 400;
     color: var(--td-text-muted);
 }
 
 .hero-status {
     display: inline-block;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 20px;
+    padding: 4px 10px;
+    border-radius: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
 }
 
-/* Hero - Travel Window variant */
+/* Hero - Window variant */
 .hero-window .hero-window-countdown {
     color: var(--td-blue);
 }
 
 .hero-window-meta {
     font-size: 13px;
+    font-weight: 500;
     color: var(--td-text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .hero-window-research {
     font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-muted);
-    margin-bottom: 12px;
-    font-style: italic;
+    margin-bottom: 10px;
 }
 
 /* Hero - Committed variant */
 .hero-committed {
-    border-left: 4px solid var(--td-green);
+    border-left: 3px solid var(--td-green);
 }
 
 /* ============================================
@@ -253,19 +244,18 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
     cursor: pointer;
     box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .travel-trip-card:hover {
-    border-color: var(--td-border-hover);
     box-shadow: var(--td-shadow-hover);
 }
 
@@ -281,47 +271,51 @@
 .trip-card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 4px;
 }
 
 .trip-emoji {
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .trip-name {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--td-text);
+    letter-spacing: -0.01em;
 }
 
 .trip-dates {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .trip-duration {
+    font-weight: 400;
     color: var(--td-text-muted);
 }
 
 .trip-meta {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-muted);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 /* ============================================
-   Status Badges - Bold pill style
+   Status Badges
    ============================================ */
 .trip-status {
     display: inline-block;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 5px 12px;
-    border-radius: 20px;
+    padding: 3px 8px;
+    border-radius: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
 }
 
 .status-research {
@@ -345,25 +339,12 @@
 }
 
 .status-complete {
-    background: #f3f4f6;
+    background: #f0f0f0;
     color: var(--td-text-muted);
 }
 
-.theme-dark .status-research {
-    background: rgba(185, 137, 0, 0.15);
-}
-
-.theme-dark .status-planning {
-    background: rgba(44, 110, 203, 0.15);
-}
-
-.theme-dark .status-booked,
-.theme-dark .status-traveling {
-    background: rgba(0, 128, 96, 0.15);
-}
-
 .theme-dark .status-complete {
-    background: rgba(134, 142, 150, 0.15);
+    background: rgba(100, 100, 100, 0.15);
 }
 
 /* ============================================
@@ -375,22 +356,22 @@
 
 .progress-ring-bg {
     stroke: var(--td-border);
-    stroke-width: 4;
+    stroke-width: 3;
     fill: none;
 }
 
 .progress-ring-fill {
     stroke: var(--td-green);
-    stroke-width: 4;
+    stroke-width: 3;
     stroke-linecap: round;
     fill: none;
     transition: stroke-dashoffset 0.3s ease;
 }
 
 .progress-ring-text {
-    font-size: 11px;
-    font-weight: 700;
-    fill: var(--td-text);
+    font-size: 10px;
+    font-weight: 600;
+    fill: var(--td-text-secondary);
     text-anchor: middle;
     dominant-baseline: central;
     transform: rotate(90deg);
@@ -401,22 +382,22 @@
    Urgent Warning
    ============================================ */
 .trip-urgent {
-    margin-top: 10px;
-    font-size: 13px;
-    font-weight: 500;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--td-red);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 /* ============================================
-   Timeline Deadlines
+   Deadlines Timeline
    ============================================ */
 .deadline-timeline {
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--td-shadow);
 }
@@ -424,7 +405,7 @@
 .timeline-item {
     display: flex;
     align-items: flex-start;
-    padding: 14px 18px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--td-border);
     transition: background 0.1s ease;
 }
@@ -434,7 +415,7 @@
 }
 
 .timeline-item:hover {
-    background: rgba(0, 0, 0, 0.02);
+    background: rgba(0, 0, 0, 0.015);
 }
 
 .theme-dark .timeline-item:hover {
@@ -445,22 +426,22 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 14px;
+    margin-right: 12px;
 }
 
 .timeline-node {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: var(--td-card);
-    border: 3px solid var(--td-text-muted);
+    border: 2px solid var(--td-text-muted);
     flex-shrink: 0;
 }
 
 .timeline-line {
     width: 2px;
     flex: 1;
-    min-height: 20px;
+    min-height: 16px;
     background: var(--td-border);
     margin-top: 4px;
 }
@@ -486,12 +467,12 @@
 }
 
 .timeline-date {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--td-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--td-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
 }
 
 .timeline-item:has(.node-urgent) .timeline-date {
@@ -503,61 +484,64 @@
 }
 
 .timeline-desc {
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--td-text);
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 /* ============================================
-   Price Tracker Cards
+   Price Tracker
    ============================================ */
 .price-tracker-card {
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
     cursor: pointer;
     box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .price-tracker-card:hover {
-    border-color: var(--td-border-hover);
     box-shadow: var(--td-shadow-hover);
 }
 
 .price-header {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .price-route {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--td-text);
+    letter-spacing: -0.01em;
 }
 
 .price-amount {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 600;
     color: var(--td-text);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
 }
 
 .price-total {
     color: var(--td-text-muted);
-    font-size: 13px;
-    font-weight: 400;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .price-status {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .price-trend-rising {
@@ -571,101 +555,104 @@
 }
 
 .price-updated {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--td-text-muted);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .price-updated .stale {
     color: var(--td-amber);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .price-check-btn {
     background: var(--td-green);
     border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 13px;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
     font-weight: 600;
     color: white;
     cursor: pointer;
     transition: all 0.15s ease;
     width: 100%;
+    letter-spacing: 0.01em;
 }
 
 .price-check-btn:hover {
     background: #006e52;
-    transform: translateY(-1px);
 }
 
 /* ============================================
-   Quick Action Buttons
+   Quick Actions
    ============================================ */
 .action-button-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .action-btn {
     background: var(--td-card);
     color: var(--td-text);
     border: 1px solid var(--td-border);
-    border-radius: 10px;
-    padding: 14px 12px;
-    font-size: 13px;
+    border-radius: 8px;
+    padding: 12px 10px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
     text-align: center;
+    letter-spacing: 0.01em;
 }
 
 .action-btn:hover {
     border-color: var(--td-blue);
     color: var(--td-blue);
     box-shadow: var(--td-shadow-hover);
-    transform: translateY(-1px);
 }
 
 /* ============================================
-   Deal Cards
+   Deals
    ============================================ */
 .deal-card {
     background: var(--td-card);
     border: 1px solid var(--td-border);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
     cursor: pointer;
     box-shadow: var(--td-shadow);
     transition: all 0.15s ease;
 }
 
 .deal-card:hover {
-    border-color: var(--td-border-hover);
     box-shadow: var(--td-shadow-hover);
 }
 
 .deal-header {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .deal-destination {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--td-text);
+    letter-spacing: -0.01em;
 }
 
 .deal-info {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-secondary);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .deal-pricing {
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--td-text-muted);
 }
 
@@ -675,10 +662,10 @@
 }
 
 /* ============================================
-   Scrollbar - Subtle
+   Scrollbar
    ============================================ */
 .travel-dashboard::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .travel-dashboard::-webkit-scrollbar-track {
@@ -687,7 +674,7 @@
 
 .travel-dashboard::-webkit-scrollbar-thumb {
     background: var(--td-border);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .travel-dashboard::-webkit-scrollbar-thumb:hover {
@@ -695,7 +682,7 @@
 }
 
 /* ============================================
-   Accessibility
+   Focus States
    ============================================ */
 .travel-trip-card:focus-visible,
 .price-tracker-card:focus-visible,

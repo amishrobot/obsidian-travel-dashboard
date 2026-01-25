@@ -179,9 +179,6 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     if (window.isTopPick) {
       const badgeEl = content.createDiv({ cls: "hero-status status-booked" });
       badgeEl.createSpan({ text: "\u2B50 TOP PICK" });
-    } else {
-      const badgeEl = content.createDiv({ cls: "hero-status status-planning" });
-      badgeEl.createSpan({ text: "OPEN WINDOW" });
     }
   }
   findHeroTrip(trips) {
