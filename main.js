@@ -1524,7 +1524,7 @@ var DataService = class {
       if (!file || !("extension" in file))
         return milestones;
       const content = await this.app.vault.read(file);
-      const importantDatesMatch = content.match(/## Important Dates[\s\S]*?\n\n/);
+      const importantDatesMatch = content.match(/## Important Dates[\s\S]*?(?=\n##|\n---\n|$)/);
       if (!importantDatesMatch)
         return milestones;
       const section = importantDatesMatch[0];

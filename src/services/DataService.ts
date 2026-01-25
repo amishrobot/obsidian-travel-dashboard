@@ -334,8 +334,8 @@ export class DataService {
 
             const content = await this.app.vault.read(file as any);
 
-            // Find Important Dates section
-            const importantDatesMatch = content.match(/## Important Dates[\s\S]*?\n\n/);
+            // Find Important Dates section (match until next ## header or end)
+            const importantDatesMatch = content.match(/## Important Dates[\s\S]*?(?=\n##|\n---\n|$)/);
             if (!importantDatesMatch) return milestones;
 
             const section = importantDatesMatch[0];
