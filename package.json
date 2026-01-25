@@ -1,0 +1,20 @@
+{
+  "name": "obsidian-travel-dashboard",
+  "version": "1.0.0",
+  "description": "Travel dashboard sidebar for JoshOS",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": ["obsidian", "travel", "dashboard"],
+  "author": "Josh Penrod",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^16.18.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.17.0",
+    "obsidian": "latest",
+    "typescript": "^5.0.0"
+  }
+}

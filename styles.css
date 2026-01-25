@@ -1,0 +1,419 @@
+/* Travel Dashboard Styles - Atom Theme Compatible */
+
+.travel-dashboard {
+    --travel-accent: #27437c;
+    --travel-accent-hover: #3a5a9c;
+    --travel-success: #4ade80;
+    --travel-warning: #fbbf24;
+    --travel-danger: #f87171;
+
+    padding: 16px;
+    font-family: var(--font-interface);
+    overflow-y: auto;
+    height: 100%;
+}
+
+.travel-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dashboard-header h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-normal);
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: all 0.15s ease;
+}
+
+.refresh-btn:hover {
+    background: var(--background-secondary);
+    color: var(--text-normal);
+}
+
+.refresh-btn.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Sections */
+.dashboard-section {
+    margin-bottom: 20px;
+}
+
+.dashboard-section h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+}
+
+.empty-state {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+    padding: 12px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 6px;
+}
+
+/* Trip Cards */
+.travel-trip-card {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.travel-trip-card:hover {
+    border-color: var(--travel-accent);
+    box-shadow: 0 2px 8px rgba(39, 67, 124, 0.15);
+}
+
+.trip-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.trip-emoji {
+    font-size: 18px;
+}
+
+.trip-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-normal);
+}
+
+.trip-dates {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.trip-duration {
+    color: var(--text-faint);
+}
+
+.trip-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 8px 0;
+}
+
+/* Status badges */
+.trip-status {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.status-research {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--travel-warning);
+}
+
+.status-planning {
+    background: rgba(39, 67, 124, 0.2);
+    color: var(--travel-accent);
+}
+
+.status-booked {
+    background: rgba(74, 222, 128, 0.2);
+    color: var(--travel-success);
+}
+
+.status-traveling {
+    background: rgba(74, 222, 128, 0.3);
+    color: var(--travel-success);
+}
+
+.status-complete {
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--travel-success);
+}
+
+/* Progress bar */
+.trip-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--travel-accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* Urgent warning */
+.trip-urgent {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--travel-warning);
+}
+
+/* Deadline list */
+.deadline-list {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.deadline-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.deadline-item:last-child {
+    border-bottom: none;
+}
+
+.deadline-indicator {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 12px;
+    min-width: 45px;
+    text-align: center;
+}
+
+.urgent-red {
+    background: rgba(248, 113, 113, 0.2);
+    color: var(--travel-danger);
+}
+
+.urgent-yellow {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--travel-warning);
+}
+
+.urgent-green {
+    background: rgba(74, 222, 128, 0.2);
+    color: var(--travel-success);
+}
+
+.deadline-desc {
+    font-size: 12px;
+    color: var(--text-normal);
+    flex: 1;
+}
+
+.deadline-dest {
+    color: var(--text-muted);
+}
+
+/* Price tracker */
+.price-tracker-card {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.price-tracker-card:hover {
+    border-color: var(--travel-accent);
+}
+
+.price-header {
+    margin-bottom: 4px;
+}
+
+.price-route {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.price-amount {
+    font-size: 14px;
+    color: var(--text-normal);
+    margin-bottom: 4px;
+}
+
+.price-total {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.price-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.price-trend-rising {
+    color: var(--travel-danger);
+}
+
+.price-trend-falling {
+    color: var(--travel-success);
+}
+
+.price-updated {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+}
+
+.price-updated .stale {
+    color: var(--travel-warning);
+}
+
+.price-check-btn {
+    background: var(--background-modifier-border);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-normal);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.price-check-btn:hover {
+    background: var(--travel-accent);
+    color: white;
+}
+
+/* Quick action buttons */
+.action-button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.action-btn {
+    background: var(--travel-accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.action-btn:hover {
+    background: var(--travel-accent-hover);
+    transform: translateY(-1px);
+}
+
+/* Deals section */
+.deal-card {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.deal-card:hover {
+    border-color: var(--travel-accent);
+}
+
+.deal-header {
+    margin-bottom: 2px;
+}
+
+.deal-destination {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.deal-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.deal-pricing {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.deal-threshold {
+    color: var(--travel-success);
+}
+
+/* Scrollbar styling */
+.travel-dashboard::-webkit-scrollbar {
+    width: 8px;
+}
+
+.travel-dashboard::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.travel-dashboard::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.travel-dashboard::-webkit-scrollbar-thumb:hover {
+    background: var(--text-faint);
+}
