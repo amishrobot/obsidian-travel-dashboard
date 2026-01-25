@@ -15,7 +15,7 @@ A sidebar dashboard for tracking travel plans, pricing, and deadlines. Built for
 ### Via BRAT (recommended for beta testing)
 
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. Add this repo: `joshpenrod/obsidian-travel-dashboard`
+2. Add this repo: `amishrobot/obsidian-travel-dashboard`
 3. Enable "Travel Dashboard" in Community Plugins
 
 ### Manual Installation
@@ -57,6 +57,28 @@ npm run build
 # Watch mode (development)
 npm run dev
 ```
+
+## Releasing Updates
+
+BRAT detects updates by checking GitHub releases. To publish an update:
+
+1. **Bump version** in `manifest.json` (e.g., `1.1.0` → `1.2.0`)
+2. **Build** the plugin:
+   ```bash
+   npm run build
+   ```
+3. **Commit and push**:
+   ```bash
+   git add -A && git commit -m "Your message" && git push
+   ```
+4. **Create GitHub release** with the built files:
+   ```bash
+   gh release create X.X.X main.js manifest.json styles.css --title "vX.X.X" --notes "Release notes here"
+   ```
+
+Users with BRAT can then check for updates to pull the new version.
+
+**Important:** The release tag (e.g., `1.2.0`) must match the version in `manifest.json`.
 
 ## License
 
