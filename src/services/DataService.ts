@@ -22,7 +22,7 @@ export class DataService {
     private pricingPath = 'Personal/travel/pricing/snapshots';
     private gapsPath = 'Personal/travel/questions.md';
     private intelPath = 'Personal/travel/pricing/destination-intelligence.md';
-    private profilePath = 'Personal/travel/travel-profile.md';
+    private profilePath = '_state/travel-profile.md';
     private inboxPath = '_inbox';
 
     constructor(private app: App) {
