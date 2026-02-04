@@ -28,24 +28,22 @@ export class DealsParser {
         const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
         const alertDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
 
-        // Find the "Great Deals Found" section
-        const greatDealsSection = content.match(/## 🟢 Great Deals Found[\s\S]*?(?=## 🎯|## 📊|## 💡|$)/);
+        // Find the "Great Deals Found" section - handle multiple formats
+        // Format 1: "## 🟢 Great Deals Found"
+        // Format 2: "## Great Deals Found (>20% off typical)"
+        const greatDealsSection = content.match(/## (?:🟢\s*)?Great Deals Found[^\n]*[\s\S]*?(?=\n## (?:🎆|All|Asia|Good|Best|\d)|---\s*$|$)/i);
         if (!greatDealsSection) return deals;
 
-        // Parse each deal entry (### N. Destination - $XXX RT (XX% off!))
-        const dealPattern = /### \d+\.\s+([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/gi;
-        const datePattern = /\*\*Best dates\*\*:\s*([^\n]+)/gi;
-        const typicalPattern = /\*\*Typical price\*\*:\s*~?\$([0-9,]+)/gi;
-        const windowPattern = /✅\s*\*\*([^*]+)\*\*|✅\s+([^\n-]+?)(?:\s*-|\s*$)/gi;
-
-        let match;
-        const dealBlocks = greatDealsSection[0].split(/### \d+\./);
+        // Split into individual deal blocks by ### headers
+        // Format: "### Destination - $XXX RT (XX% off!)" or "### N. Destination - $XXX RT"
+        const dealBlocks = greatDealsSection[0].split(/###\s+(?:\d+\.\s*)?/).filter(b => b.trim());
 
         for (const block of dealBlocks) {
             if (!block.trim()) continue;
 
             // Parse destination and price from header
-            const headerMatch = block.match(/([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
+            // Handles: "Croatia (Split) - $234 RT (75% off!)"
+            const headerMatch = block.match(/^([^-\n]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
             if (!headerMatch) continue;
 
             const destination = headerMatch[1].trim();
@@ -53,17 +51,37 @@ export class DealsParser {
             const percentOff = parseInt(headerMatch[3]);
             const isBucketList = !!headerMatch[4];
 
-            // Parse dates
-            const datesMatch = block.match(/\*\*Best dates\*\*:\s*([^\n]+)/i);
+            // Parse dates - handle multiple formats:
+            // Format 1: "**Best dates**: Feb 15-22"
+            // Format 2: "- **Dates**: 2026-05-05"
+            const datesMatch = block.match(/\*\*(?:Best )?[Dd]ates?\*\*:\s*([^\n]+)/i);
             const dates = datesMatch ? datesMatch[1].trim() : '';
 
-            // Parse typical price
+            // Parse typical price - handle multiple formats:
+            // Format 1: "**Typical price**: ~$950"
+            // Format 2: "- **Typical price**: $950"
             const typicalMatch = block.match(/\*\*Typical price\*\*:\s*~?\$([0-9,]+)/i);
             const typicalPrice = typicalMatch ? parseInt(typicalMatch[1].replace(/,/g, '')) : Math.round(price / (1 - percentOff / 100));
 
-            // Parse window match (look for ✅ lines)
-            const windowMatches = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
-            const windowMatch = windowMatches ? (windowMatches[1] || windowMatches[2] || '').trim() : undefined;
+            // Parse window match - handle multiple formats:
+            // Format 1: "✅ **July 4th** - matches"
+            // Format 2: "- **Window match**: Close to Spring Break (Apr 6-10)"
+            // Format 3: "- **Window match**: Requires PTO"
+            let windowMatch: string | undefined;
+            const oldStyleMatch = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
+            const newStyleMatch = block.match(/\*\*Window match\*\*:\s*([^\n]+)/i);
+
+            if (newStyleMatch) {
+                const matchText = newStyleMatch[1].trim();
+                // Extract window name from "Close to Spring Break (Apr 6-10)"
+                if (matchText.startsWith('Close to ')) {
+                    windowMatch = matchText.replace('Close to ', '').replace(/\s*\([^)]+\)/, '').trim();
+                } else if (!matchText.includes('Requires PTO')) {
+                    windowMatch = matchText;
+                }
+            } else if (oldStyleMatch) {
+                windowMatch = (oldStyleMatch[1] || oldStyleMatch[2] || '').trim();
+            }
 
             deals.push({
                 destination,

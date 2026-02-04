@@ -1021,31 +1021,37 @@ var DealsParser = class {
     const deals = [];
     const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
     const alertDate = dateMatch ? dateMatch[1] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const greatDealsSection = content.match(/## 🟢 Great Deals Found[\s\S]*?(?=## 🎯|## 📊|## 💡|$)/);
+    const greatDealsSection = content.match(/## (?:🟢\s*)?Great Deals Found[^\n]*[\s\S]*?(?=\n## (?:🎆|All|Asia|Good|Best|\d)|---\s*$|$)/i);
     if (!greatDealsSection)
       return deals;
-    const dealPattern = /### \d+\.\s+([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/gi;
-    const datePattern = /\*\*Best dates\*\*:\s*([^\n]+)/gi;
-    const typicalPattern = /\*\*Typical price\*\*:\s*~?\$([0-9,]+)/gi;
-    const windowPattern = /✅\s*\*\*([^*]+)\*\*|✅\s+([^\n-]+?)(?:\s*-|\s*$)/gi;
-    let match;
-    const dealBlocks = greatDealsSection[0].split(/### \d+\./);
+    const dealBlocks = greatDealsSection[0].split(/###\s+(?:\d+\.\s*)?/).filter((b) => b.trim());
     for (const block of dealBlocks) {
       if (!block.trim())
         continue;
-      const headerMatch = block.match(/([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
+      const headerMatch = block.match(/^([^-\n]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
       if (!headerMatch)
         continue;
       const destination = headerMatch[1].trim();
       const price = parseInt(headerMatch[2].replace(/,/g, ""));
       const percentOff = parseInt(headerMatch[3]);
       const isBucketList = !!headerMatch[4];
-      const datesMatch = block.match(/\*\*Best dates\*\*:\s*([^\n]+)/i);
+      const datesMatch = block.match(/\*\*(?:Best )?[Dd]ates?\*\*:\s*([^\n]+)/i);
       const dates = datesMatch ? datesMatch[1].trim() : "";
       const typicalMatch = block.match(/\*\*Typical price\*\*:\s*~?\$([0-9,]+)/i);
       const typicalPrice = typicalMatch ? parseInt(typicalMatch[1].replace(/,/g, "")) : Math.round(price / (1 - percentOff / 100));
-      const windowMatches = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
-      const windowMatch = windowMatches ? (windowMatches[1] || windowMatches[2] || "").trim() : void 0;
+      let windowMatch;
+      const oldStyleMatch = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
+      const newStyleMatch = block.match(/\*\*Window match\*\*:\s*([^\n]+)/i);
+      if (newStyleMatch) {
+        const matchText = newStyleMatch[1].trim();
+        if (matchText.startsWith("Close to ")) {
+          windowMatch = matchText.replace("Close to ", "").replace(/\s*\([^)]+\)/, "").trim();
+        } else if (!matchText.includes("Requires PTO")) {
+          windowMatch = matchText;
+        }
+      } else if (oldStyleMatch) {
+        windowMatch = (oldStyleMatch[1] || oldStyleMatch[2] || "").trim();
+      }
       deals.push({
         destination,
         price,
@@ -1330,13 +1336,17 @@ var DataService = class {
   constructor(app) {
     this.app = app;
     // Paths relative to vault root
+    // Note: Unified trip model - all trip files now in basePath with type: trip
     this.basePath = "Personal/travel";
-    this.researchPath = "Personal/travel/research";
-    this.itineraryPath = "Personal/travel/trips";
+    this.researchPath = "Personal/travel";
+    // Was research/, now unified
+    this.itineraryPath = "Personal/travel";
+    // Was trips/, now unified
     this.pricingPath = "Personal/travel/pricing/snapshots";
     this.gapsPath = "Personal/travel/questions.md";
     this.intelPath = "Personal/travel/pricing/destination-intelligence.md";
     this.profilePath = "_state/travel-profile.md";
+    // Moved to _state per JoshOS convention
     this.inboxPath = "_inbox";
     this.researchParser = new ResearchParser(app);
     this.itineraryParser = new ItineraryParser(app);
@@ -1435,7 +1445,10 @@ var DataService = class {
     });
   }
   /**
-   * Parse deal dates like "Feb 15-22" or "Mar 1-8"
+   * Parse deal dates - handles multiple formats:
+   * - ISO format: "2026-05-05"
+   * - Range: "Feb 15-22" or "Mar 1-8"
+   * - Cross-month: "Feb 15 - Mar 2"
    */
   parseDealDates(dateStr) {
     if (!dateStr)
@@ -1454,6 +1467,15 @@ var DataService = class {
       "nov": 10,
       "dec": 11
     };
+    const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const year2 = parseInt(isoMatch[1]);
+      const month = parseInt(isoMatch[2]) - 1;
+      const day = parseInt(isoMatch[3]);
+      const startDate = new Date(year2, month, day);
+      const endDate = new Date(year2, month, day + 7);
+      return { start: startDate, end: endDate };
+    }
     const year = (/* @__PURE__ */ new Date()).getFullYear();
     const sameMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
     if (sameMonthMatch) {

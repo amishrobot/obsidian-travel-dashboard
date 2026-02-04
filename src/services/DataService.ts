@@ -16,13 +16,14 @@ export class DataService {
     private windowParser: TravelWindowParser;
 
     // Paths relative to vault root
+    // Note: Unified trip model - all trip files now in basePath with type: trip
     private basePath = 'Personal/travel';
-    private researchPath = 'Personal/travel/research';
-    private itineraryPath = 'Personal/travel/trips';
+    private researchPath = 'Personal/travel';      // Was research/, now unified
+    private itineraryPath = 'Personal/travel';     // Was trips/, now unified
     private pricingPath = 'Personal/travel/pricing/snapshots';
     private gapsPath = 'Personal/travel/questions.md';
     private intelPath = 'Personal/travel/pricing/destination-intelligence.md';
-    private profilePath = '_state/travel-profile.md';
+    private profilePath = '_state/travel-profile.md';  // Moved to _state per JoshOS convention
     private inboxPath = '_inbox';
 
     constructor(private app: App) {
@@ -151,7 +152,10 @@ export class DataService {
     }
 
     /**
-     * Parse deal dates like "Feb 15-22" or "Mar 1-8"
+     * Parse deal dates - handles multiple formats:
+     * - ISO format: "2026-05-05"
+     * - Range: "Feb 15-22" or "Mar 1-8"
+     * - Cross-month: "Feb 15 - Mar 2"
      */
     private parseDealDates(dateStr: string): { start: Date; end: Date } | null {
         if (!dateStr) return null;
@@ -161,9 +165,20 @@ export class DataService {
             'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
         };
 
+        // Pattern 1: ISO format "2026-05-05" (single date - assume 7-day trip)
+        const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const year = parseInt(isoMatch[1]);
+            const month = parseInt(isoMatch[2]) - 1; // Convert to 0-indexed
+            const day = parseInt(isoMatch[3]);
+            const startDate = new Date(year, month, day);
+            const endDate = new Date(year, month, day + 7); // Assume 7-day window
+            return { start: startDate, end: endDate };
+        }
+
         const year = new Date().getFullYear();
 
-        // Pattern: "Feb 15-22"
+        // Pattern 2: "Feb 15-22" (same month range)
         const sameMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
         if (sameMonthMatch) {
             const month = monthNames[sameMonthMatch[1].toLowerCase()];
@@ -175,7 +190,7 @@ export class DataService {
             };
         }
 
-        // Pattern: "Feb 15 - Mar 2"
+        // Pattern 3: "Feb 15 - Mar 2" (cross-month range)
         const diffMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
         if (diffMonthMatch) {
             const startMonth = monthNames[diffMonthMatch[1].toLowerCase()];
