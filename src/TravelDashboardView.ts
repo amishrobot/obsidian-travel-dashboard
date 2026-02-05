@@ -59,32 +59,53 @@ export class TravelDashboardView extends ItemView {
             return;
         }
 
+        console.log('[TravelDashboard] Starting render with data:', {
+            tripsCount: this.data.trips.length,
+            tripsByStatus: this.data.tripsByStatus,
+            committedTrip: this.data.committedTrip?.destination,
+            nextWindow: this.data.nextWindow?.name,
+            actionItems: this.data.actionItems.length,
+            milestones: this.data.milestones.length,
+            deadlines: this.data.deadlines.length,
+        });
+
         // Header
+        console.log('[TravelDashboard] Rendering header...');
         this.renderHeader(container);
 
         // ACTION REQUIRED section (at the very top, before hero)
+        console.log('[TravelDashboard] Rendering action required...');
         this.renderActionRequiredSection(container);
 
         // Hero Section (next upcoming trip with countdown)
+        console.log('[TravelDashboard] Rendering hero...');
         this.renderHeroSection(container);
 
         // Milestones (personal important dates)
+        console.log('[TravelDashboard] Rendering milestones...');
         this.renderMilestonesSection(container);
 
         // Researching (trips in progress)
+        console.log('[TravelDashboard] Rendering trips...');
         this.renderTripsSection(container);
 
         // Deals & Opportunities (right after trips for visibility)
+        console.log('[TravelDashboard] Rendering deals...');
         this.renderDealsSection(container);
 
         // Deadlines
+        console.log('[TravelDashboard] Rendering deadlines...');
         this.renderDeadlinesSection(container);
 
         // Price Tracker
+        console.log('[TravelDashboard] Rendering prices...');
         this.renderPricesSection(container);
 
         // Quick Actions (at bottom since they just copy commands)
+        console.log('[TravelDashboard] Rendering actions...');
         this.renderActionsSection(container);
+
+        console.log('[TravelDashboard] Render complete');
     }
 
     private renderHeader(container: Element) {
@@ -235,9 +256,8 @@ export class TravelDashboardView extends ItemView {
 
         // Click to open
         hero.addEventListener('click', () => {
-            const path = trip.itineraryPath || trip.researchPath;
-            if (path) {
-                this.app.workspace.openLinkText(path, '', false);
+            if (trip.filePath) {
+                this.app.workspace.openLinkText(trip.filePath, '', false);
             }
         });
         hero.style.cursor = 'pointer';
@@ -281,7 +301,7 @@ export class TravelDashboardView extends ItemView {
 
         // If there are trips being researched for this window, show count
         const researchingTrips = this.data?.trips.filter(t =>
-            !t.committed && t.status === 'research'
+            !t.committed && t.status === 'researching'
         ) || [];
 
         if (researchingTrips.length > 0) {
@@ -483,7 +503,11 @@ export class TravelDashboardView extends ItemView {
 
     private renderTripsSection(container: Element) {
         const tripsByStatus = this.data?.tripsByStatus;
-        if (!tripsByStatus) return;
+        console.log('[TravelDashboard] renderTripsSection - tripsByStatus:', tripsByStatus);
+        if (!tripsByStatus) {
+            console.log('[TravelDashboard] renderTripsSection - tripsByStatus is null/undefined, returning early');
+            return;
+        }
 
         // Define which status groups to show and their display names
         const statusGroups: Array<{ status: keyof typeof tripsByStatus; label: string; showIfEmpty: boolean }> = [
@@ -498,6 +522,7 @@ export class TravelDashboardView extends ItemView {
 
         for (const { status, label, showIfEmpty } of statusGroups) {
             const trips = tripsByStatus[status];
+            console.log(`[TravelDashboard] renderTripsSection - ${status}: ${trips?.length || 0} trips`);
             if (!trips.length && !showIfEmpty) continue;
 
             const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
@@ -507,6 +532,7 @@ export class TravelDashboardView extends ItemView {
                 section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: 'empty-state' });
             } else {
                 for (const trip of trips) {
+                    console.log(`[TravelDashboard] renderTripsSection - rendering trip card: ${trip.destination}`);
                     this.renderTripCard(section, trip);
                 }
                 anyTripsShown = true;
@@ -515,6 +541,7 @@ export class TravelDashboardView extends ItemView {
 
         // If no trips at all, show a single empty state
         if (!anyTripsShown) {
+            console.log('[TravelDashboard] renderTripsSection - no trips shown, showing empty state');
             const section = container.createDiv({ cls: 'dashboard-section' });
             section.createEl('h3', { text: 'TRIPS' });
             section.createDiv({ text: 'No trips yet. Run /travel.research to start planning!', cls: 'empty-state' });

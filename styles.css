@@ -512,6 +512,17 @@
     margin-bottom: 8px;
 }
 
+.trip-window {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--td-blue);
+    background: var(--td-blue-light);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
 /* ============================================
    Status Badges
    ============================================ */

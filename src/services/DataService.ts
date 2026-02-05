@@ -27,6 +27,7 @@ export class DataService {
     }
 
     async loadAll(): Promise<DashboardData> {
+        console.log('[TravelDashboard] Loading data...');
         const [trips, prices, allDeals, travelWindows, discoveredDeals] = await Promise.all([
             this.tripParser.parseAll(this.tripPath),
             this.pricingParser.parseAll(this.pricingPath),
@@ -34,6 +35,7 @@ export class DataService {
             this.windowParser.parse(this.profilePath),
             this.dealsParser.parseDiscoveredDeals(this.inboxPath),
         ]);
+        console.log('[TravelDashboard] Loaded:', { trips: trips.length, prices: prices.length, windows: travelWindows.length, deals: discoveredDeals.length });
 
         // Group trips by status
         const tripsByStatus = this.groupTripsByStatus(trips);

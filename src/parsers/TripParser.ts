@@ -10,14 +10,19 @@ export class TripParser {
 
     async parseAll(folderPath: string): Promise<Trip[]> {
         const results: Trip[] = [];
-        const files = this.app.vault.getMarkdownFiles().filter(f =>
+        const allFiles = this.app.vault.getMarkdownFiles();
+        console.log(`[TripParser] Total markdown files: ${allFiles.length}`);
+
+        const files = allFiles.filter(f =>
             f.path.startsWith(folderPath) &&
             !f.basename.startsWith('_') &&
             !f.path.includes('/pricing/') // Exclude pricing subfolder
         );
+        console.log(`[TripParser] Files in ${folderPath}: ${files.length}`, files.map(f => f.path));
 
         for (const file of files) {
             const trip = await this.parse(file);
+            console.log(`[TripParser] Parsed ${file.path}:`, trip ? `✓ ${trip.destination}` : '✗ not a trip');
             if (trip) results.push(trip);
         }
 

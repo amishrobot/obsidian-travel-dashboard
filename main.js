@@ -61,6 +61,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     });
   }
   render() {
+    var _a, _b;
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("travel-dashboard");
@@ -68,15 +69,34 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       container.createEl("div", { text: "Loading...", cls: "travel-loading" });
       return;
     }
+    console.log("[TravelDashboard] Starting render with data:", {
+      tripsCount: this.data.trips.length,
+      tripsByStatus: this.data.tripsByStatus,
+      committedTrip: (_a = this.data.committedTrip) == null ? void 0 : _a.destination,
+      nextWindow: (_b = this.data.nextWindow) == null ? void 0 : _b.name,
+      actionItems: this.data.actionItems.length,
+      milestones: this.data.milestones.length,
+      deadlines: this.data.deadlines.length
+    });
+    console.log("[TravelDashboard] Rendering header...");
     this.renderHeader(container);
+    console.log("[TravelDashboard] Rendering action required...");
     this.renderActionRequiredSection(container);
+    console.log("[TravelDashboard] Rendering hero...");
     this.renderHeroSection(container);
+    console.log("[TravelDashboard] Rendering milestones...");
     this.renderMilestonesSection(container);
+    console.log("[TravelDashboard] Rendering trips...");
     this.renderTripsSection(container);
+    console.log("[TravelDashboard] Rendering deals...");
     this.renderDealsSection(container);
+    console.log("[TravelDashboard] Rendering deadlines...");
     this.renderDeadlinesSection(container);
+    console.log("[TravelDashboard] Rendering prices...");
     this.renderPricesSection(container);
+    console.log("[TravelDashboard] Rendering actions...");
     this.renderActionsSection(container);
+    console.log("[TravelDashboard] Render complete");
   }
   renderHeader(container) {
     const header = container.createDiv({ cls: "dashboard-header" });
@@ -183,9 +203,8 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     const statusEl = content.createDiv({ cls: "hero-status status-booked" });
     statusEl.createSpan({ text: "COMMITTED" });
     hero.addEventListener("click", () => {
-      const path = trip.itineraryPath || trip.researchPath;
-      if (path) {
-        this.app.workspace.openLinkText(path, "", false);
+      if (trip.filePath) {
+        this.app.workspace.openLinkText(trip.filePath, "", false);
       }
     });
     hero.style.cursor = "pointer";
@@ -218,7 +237,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     metaEl.createSpan({ text: " \xB7 " });
     metaEl.createSpan({ text: window.whoCanGo });
     const researchingTrips = ((_a = this.data) == null ? void 0 : _a.trips.filter(
-      (t) => !t.committed && t.status === "research"
+      (t) => !t.committed && t.status === "researching"
     )) || [];
     if (researchingTrips.length > 0) {
       const researchEl = content.createDiv({ cls: "hero-window-research" });
@@ -385,8 +404,11 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   renderTripsSection(container) {
     var _a;
     const tripsByStatus = (_a = this.data) == null ? void 0 : _a.tripsByStatus;
-    if (!tripsByStatus)
+    console.log("[TravelDashboard] renderTripsSection - tripsByStatus:", tripsByStatus);
+    if (!tripsByStatus) {
+      console.log("[TravelDashboard] renderTripsSection - tripsByStatus is null/undefined, returning early");
       return;
+    }
     const statusGroups = [
       { status: "booked", label: "BOOKED", showIfEmpty: false },
       { status: "planned", label: "PLANNED", showIfEmpty: false },
@@ -396,6 +418,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     let anyTripsShown = false;
     for (const { status, label, showIfEmpty } of statusGroups) {
       const trips = tripsByStatus[status];
+      console.log(`[TravelDashboard] renderTripsSection - ${status}: ${(trips == null ? void 0 : trips.length) || 0} trips`);
       if (!trips.length && !showIfEmpty)
         continue;
       const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
@@ -404,12 +427,14 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
         section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: "empty-state" });
       } else {
         for (const trip of trips) {
+          console.log(`[TravelDashboard] renderTripsSection - rendering trip card: ${trip.destination}`);
           this.renderTripCard(section, trip);
         }
         anyTripsShown = true;
       }
     }
     if (!anyTripsShown) {
+      console.log("[TravelDashboard] renderTripsSection - no trips shown, showing empty state");
       const section = container.createDiv({ cls: "dashboard-section" });
       section.createEl("h3", { text: "TRIPS" });
       section.createDiv({ text: "No trips yet. Run /travel.research to start planning!", cls: "empty-state" });
@@ -728,12 +753,16 @@ var TripParser = class {
   }
   async parseAll(folderPath) {
     const results = [];
-    const files = this.app.vault.getMarkdownFiles().filter(
+    const allFiles = this.app.vault.getMarkdownFiles();
+    console.log(`[TripParser] Total markdown files: ${allFiles.length}`);
+    const files = allFiles.filter(
       (f) => f.path.startsWith(folderPath) && !f.basename.startsWith("_") && !f.path.includes("/pricing/")
       // Exclude pricing subfolder
     );
+    console.log(`[TripParser] Files in ${folderPath}: ${files.length}`, files.map((f) => f.path));
     for (const file of files) {
       const trip = await this.parse(file);
+      console.log(`[TripParser] Parsed ${file.path}:`, trip ? `\u2713 ${trip.destination}` : "\u2717 not a trip");
       if (trip)
         results.push(trip);
     }
@@ -1380,6 +1409,7 @@ var DataService = class {
     this.windowParser = new TravelWindowParser(app);
   }
   async loadAll() {
+    console.log("[TravelDashboard] Loading data...");
     const [trips, prices, allDeals, travelWindows, discoveredDeals] = await Promise.all([
       this.tripParser.parseAll(this.tripPath),
       this.pricingParser.parseAll(this.pricingPath),
@@ -1387,6 +1417,7 @@ var DataService = class {
       this.windowParser.parse(this.profilePath),
       this.dealsParser.parseDiscoveredDeals(this.inboxPath)
     ]);
+    console.log("[TravelDashboard] Loaded:", { trips: trips.length, prices: prices.length, windows: travelWindows.length, deals: discoveredDeals.length });
     const tripsByStatus = this.groupTripsByStatus(trips);
     const deadlines = this.buildDeadlinesFromTrips(trips, prices);
     const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
