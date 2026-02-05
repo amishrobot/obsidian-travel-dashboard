@@ -63,51 +63,34 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   render() {
     const container = this.contentEl;
     container.empty();
-    const wrapper = container.createDiv();
-    wrapper.style.padding = "20px";
-    wrapper.style.backgroundColor = "#f0f0f0";
-    wrapper.createEl("h1", { text: "TRAVEL DASHBOARD" });
-    wrapper.createEl("p", { text: "If you can see this, the view is working!" });
-    if (this.data) {
-      wrapper.createEl("p", { text: `Trips loaded: ${this.data.trips.length}` });
-      wrapper.createEl("p", { text: `Deals loaded: ${this.data.deals.length}` });
-      if (this.data.trips.length > 0) {
-        const list = wrapper.createEl("ul");
-        for (const trip of this.data.trips) {
-          list.createEl("li", { text: `${trip.destination} - ${trip.status}` });
-        }
-      }
-    } else {
-      wrapper.createEl("p", { text: "No data loaded yet..." });
+    container.addClass("travel-dashboard");
+    if (!this.data) {
+      container.createEl("div", { text: "Loading...", cls: "travel-loading" });
+      return;
     }
-    return;
-    container.style.backgroundColor = "#f0f0f0";
-    container.style.padding = "20px";
-    console.log("[TravelDashboard] Rendering header...");
     this.renderHeader(container);
-    console.log("[TravelDashboard] Rendering action required...");
     this.renderActionRequiredSection(container);
-    console.log("[TravelDashboard] Rendering hero...");
     this.renderHeroSection(container);
-    console.log("[TravelDashboard] Rendering milestones...");
     this.renderMilestonesSection(container);
-    console.log("[TravelDashboard] Rendering trips...");
     this.renderTripsSection(container);
-    console.log("[TravelDashboard] Rendering deals...");
     this.renderDealsSection(container);
-    console.log("[TravelDashboard] Rendering deadlines...");
     this.renderDeadlinesSection(container);
-    console.log("[TravelDashboard] Rendering prices...");
     this.renderPricesSection(container);
-    console.log("[TravelDashboard] Rendering actions...");
     this.renderActionsSection(container);
-    console.log("[TravelDashboard] Render complete");
   }
   renderHeader(container) {
-    const header = container.createDiv({
-      text: "=== TRAVEL DASHBOARD ===",
-      cls: "dashboard-header",
-      attr: { style: "background: yellow; padding: 20px; font-size: 24px; font-weight: bold;" }
+    const header = container.createDiv({ cls: "dashboard-header" });
+    header.createEl("h2", { text: "TRAVEL DASHBOARD" });
+    const refreshBtn = header.createEl("button", {
+      cls: "refresh-btn",
+      attr: { "aria-label": "Refresh" }
+    });
+    refreshBtn.innerHTML = "\u27F3";
+    refreshBtn.addEventListener("click", async () => {
+      refreshBtn.addClass("spinning");
+      await this.refresh();
+      refreshBtn.removeClass("spinning");
+      new import_obsidian.Notice("Travel data refreshed");
     });
   }
   renderActionRequiredSection(container) {
@@ -401,9 +384,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   renderTripsSection(container) {
     var _a;
     const tripsByStatus = (_a = this.data) == null ? void 0 : _a.tripsByStatus;
-    console.log("[TravelDashboard] renderTripsSection - tripsByStatus:", tripsByStatus);
     if (!tripsByStatus) {
-      console.log("[TravelDashboard] renderTripsSection - tripsByStatus is null/undefined, returning early");
       return;
     }
     const statusGroups = [
@@ -415,27 +396,20 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     let anyTripsShown = false;
     for (const { status, label, showIfEmpty } of statusGroups) {
       const trips = tripsByStatus[status];
-      console.log(`[TravelDashboard] renderTripsSection - ${status}: ${(trips == null ? void 0 : trips.length) || 0} trips`);
       if (!trips.length && !showIfEmpty)
         continue;
       const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
-      section.style.backgroundColor = "lightgreen";
-      section.style.padding = "10px";
-      section.style.marginBottom = "10px";
-      section.style.border = "2px solid green";
       section.createEl("h3", { text: label });
       if (!trips.length) {
         section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: "empty-state" });
       } else {
         for (const trip of trips) {
-          console.log(`[TravelDashboard] renderTripsSection - rendering trip card: ${trip.destination}`);
           this.renderTripCard(section, trip);
         }
         anyTripsShown = true;
       }
     }
     if (!anyTripsShown) {
-      console.log("[TravelDashboard] renderTripsSection - no trips shown, showing empty state");
       const section = container.createDiv({ cls: "dashboard-section" });
       section.createEl("h3", { text: "TRIPS" });
       section.createDiv({ text: "No trips yet. Run /travel.research to start planning!", cls: "empty-state" });
