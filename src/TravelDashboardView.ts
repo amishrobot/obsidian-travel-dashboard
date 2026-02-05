@@ -50,7 +50,7 @@ export class TravelDashboardView extends ItemView {
     }
 
     render() {
-        const container = this.containerEl.children[1];
+        const container = this.contentEl;
         container.empty();
         container.addClass('travel-dashboard');
 
@@ -68,6 +68,10 @@ export class TravelDashboardView extends ItemView {
             milestones: this.data.milestones.length,
             deadlines: this.data.deadlines.length,
         });
+
+        // DEBUG: Add inline styles to verify container is working
+        (container as HTMLElement).style.backgroundColor = '#f0f0f0';
+        (container as HTMLElement).style.padding = '20px';
 
         // Header
         console.log('[TravelDashboard] Rendering header...');
@@ -109,19 +113,11 @@ export class TravelDashboardView extends ItemView {
     }
 
     private renderHeader(container: Element) {
-        const header = container.createDiv({ cls: 'dashboard-header' });
-        header.createEl('h2', { text: 'TRAVEL DASHBOARD' });
-
-        const refreshBtn = header.createEl('button', {
-            cls: 'refresh-btn',
-            attr: { 'aria-label': 'Refresh' },
-        });
-        refreshBtn.innerHTML = '⟳';
-        refreshBtn.addEventListener('click', async () => {
-            refreshBtn.addClass('spinning');
-            await this.refresh();
-            refreshBtn.removeClass('spinning');
-            new Notice('Travel data refreshed');
+        // DEBUG: Simplify to match working deadlines pattern
+        const header = container.createDiv({
+            text: '=== TRAVEL DASHBOARD ===',
+            cls: 'dashboard-header',
+            attr: { style: 'background: yellow; padding: 20px; font-size: 24px; font-weight: bold;' }
         });
     }
 
@@ -526,6 +522,11 @@ export class TravelDashboardView extends ItemView {
             if (!trips.length && !showIfEmpty) continue;
 
             const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
+            // DEBUG: Make section visible
+            (section as HTMLElement).style.backgroundColor = 'lightgreen';
+            (section as HTMLElement).style.padding = '10px';
+            (section as HTMLElement).style.marginBottom = '10px';
+            (section as HTMLElement).style.border = '2px solid green';
             section.createEl('h3', { text: label });
 
             if (!trips.length) {
