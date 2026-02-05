@@ -22,7 +22,7 @@ __export(main_exports, {
   default: () => TravelDashboardPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/TravelDashboardView.ts
 var import_obsidian = require("obsidian");
@@ -61,7 +61,6 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     });
   }
   render() {
-    var _a, _b;
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("travel-dashboard");
@@ -69,34 +68,15 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
       container.createEl("div", { text: "Loading...", cls: "travel-loading" });
       return;
     }
-    console.log("[TravelDashboard] Starting render with data:", {
-      tripsCount: this.data.trips.length,
-      tripsByStatus: this.data.tripsByStatus,
-      committedTrip: (_a = this.data.committedTrip) == null ? void 0 : _a.destination,
-      nextWindow: (_b = this.data.nextWindow) == null ? void 0 : _b.name,
-      actionItems: this.data.actionItems.length,
-      milestones: this.data.milestones.length,
-      deadlines: this.data.deadlines.length
-    });
-    console.log("[TravelDashboard] Rendering header...");
     this.renderHeader(container);
-    console.log("[TravelDashboard] Rendering action required...");
     this.renderActionRequiredSection(container);
-    console.log("[TravelDashboard] Rendering hero...");
     this.renderHeroSection(container);
-    console.log("[TravelDashboard] Rendering milestones...");
     this.renderMilestonesSection(container);
-    console.log("[TravelDashboard] Rendering trips...");
     this.renderTripsSection(container);
-    console.log("[TravelDashboard] Rendering deals...");
     this.renderDealsSection(container);
-    console.log("[TravelDashboard] Rendering deadlines...");
     this.renderDeadlinesSection(container);
-    console.log("[TravelDashboard] Rendering prices...");
     this.renderPricesSection(container);
-    console.log("[TravelDashboard] Rendering actions...");
     this.renderActionsSection(container);
-    console.log("[TravelDashboard] Render complete");
   }
   renderHeader(container) {
     const header = container.createDiv({ cls: "dashboard-header" });
@@ -173,7 +153,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     }
   }
   renderCommittedTripHero(container, trip) {
-    const parsed = this.parseTripDates(trip.dates);
+    const parsed = this.parseTripDates(trip.tripDates);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
     let daysUntilDeparture = 0;
@@ -196,15 +176,16 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     const countdownEl = content.createDiv({ cls: "hero-countdown" });
     countdownEl.createSpan({ text: this.formatCountdown(daysUntilDeparture, tripStatus) });
     const datesEl = content.createDiv({ cls: "hero-dates" });
-    datesEl.createSpan({ text: trip.dates });
+    datesEl.createSpan({ text: trip.tripDates });
     if (trip.duration && trip.duration !== "TBD") {
       datesEl.createSpan({ text: ` \xB7 ${trip.duration}`, cls: "hero-duration" });
     }
     const statusEl = content.createDiv({ cls: "hero-status status-booked" });
     statusEl.createSpan({ text: "COMMITTED" });
     hero.addEventListener("click", () => {
-      if (trip.filePath) {
-        this.app.workspace.openLinkText(trip.filePath, "", false);
+      const path = trip.itineraryPath || trip.researchPath;
+      if (path) {
+        this.app.workspace.openLinkText(path, "", false);
       }
     });
     hero.style.cursor = "pointer";
@@ -237,7 +218,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     metaEl.createSpan({ text: " \xB7 " });
     metaEl.createSpan({ text: window.whoCanGo });
     const researchingTrips = ((_a = this.data) == null ? void 0 : _a.trips.filter(
-      (t) => !t.committed && t.status === "researching"
+      (t) => !t.committed && t.status === "research"
     )) || [];
     if (researchingTrips.length > 0) {
       const researchEl = content.createDiv({ cls: "hero-window-research" });
@@ -291,7 +272,7 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     let bestTrip = null;
     let smallestFutureDays = Infinity;
     for (const trip of trips) {
-      const parsed = this.parseTripDates(trip.dates);
+      const parsed = this.parseTripDates(trip.tripDates);
       if (!parsed)
         continue;
       const { startDate, endDate } = parsed;
@@ -403,41 +384,14 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   }
   renderTripsSection(container) {
     var _a;
-    const tripsByStatus = (_a = this.data) == null ? void 0 : _a.tripsByStatus;
-    console.log("[TravelDashboard] renderTripsSection - tripsByStatus:", tripsByStatus);
-    if (!tripsByStatus) {
-      console.log("[TravelDashboard] renderTripsSection - tripsByStatus is null/undefined, returning early");
+    const section = container.createDiv({ cls: "dashboard-section" });
+    section.createEl("h3", { text: "RESEARCHING" });
+    if (!((_a = this.data) == null ? void 0 : _a.trips.length)) {
+      section.createDiv({ text: "No trips being researched", cls: "empty-state" });
       return;
     }
-    const statusGroups = [
-      { status: "booked", label: "BOOKED", showIfEmpty: false },
-      { status: "planned", label: "PLANNED", showIfEmpty: false },
-      { status: "researching", label: "RESEARCHING", showIfEmpty: false },
-      { status: "idea", label: "IDEAS", showIfEmpty: false }
-    ];
-    let anyTripsShown = false;
-    for (const { status, label, showIfEmpty } of statusGroups) {
-      const trips = tripsByStatus[status];
-      console.log(`[TravelDashboard] renderTripsSection - ${status}: ${(trips == null ? void 0 : trips.length) || 0} trips`);
-      if (!trips.length && !showIfEmpty)
-        continue;
-      const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
-      section.createEl("h3", { text: label });
-      if (!trips.length) {
-        section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: "empty-state" });
-      } else {
-        for (const trip of trips) {
-          console.log(`[TravelDashboard] renderTripsSection - rendering trip card: ${trip.destination}`);
-          this.renderTripCard(section, trip);
-        }
-        anyTripsShown = true;
-      }
-    }
-    if (!anyTripsShown) {
-      console.log("[TravelDashboard] renderTripsSection - no trips shown, showing empty state");
-      const section = container.createDiv({ cls: "dashboard-section" });
-      section.createEl("h3", { text: "TRIPS" });
-      section.createDiv({ text: "No trips yet. Run /travel.research to start planning!", cls: "empty-state" });
+    for (const trip of this.data.trips) {
+      this.renderTripCard(section, trip);
     }
   }
   renderTripCard(container, trip) {
@@ -447,31 +401,31 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     header.createSpan({ text: trip.countryCode || "\u{1F30D}", cls: "trip-emoji" });
     header.createSpan({ text: trip.destination, cls: "trip-name" });
     const dates = content.createDiv({ cls: "trip-dates" });
-    dates.createSpan({ text: trip.dates });
+    dates.createSpan({ text: trip.tripDates });
     if (trip.duration && trip.duration !== "TBD") {
       dates.createSpan({ text: ` (${trip.duration})`, cls: "trip-duration" });
     }
     const meta = content.createDiv({ cls: "trip-meta" });
-    meta.createSpan({ text: trip.travelers || "TBD" });
+    meta.createSpan({ text: `${trip.travelers} traveler${trip.travelers > 1 ? "s" : ""}` });
     if (trip.budget && trip.budget !== "TBD") {
       meta.createSpan({ text: " | " });
       meta.createSpan({ text: trip.budget });
     }
-    if (trip.window) {
-      const windowBadge = content.createDiv({ cls: "trip-window" });
-      windowBadge.createSpan({ text: trip.window });
-    }
+    const statusClass = `status-${trip.status}`;
+    const status = content.createDiv({ cls: `trip-status ${statusClass}` });
+    status.createSpan({ text: trip.status.toUpperCase() });
     if (trip.urgentItems > 0) {
       const urgent = content.createDiv({ cls: "trip-urgent" });
-      urgent.createSpan({ text: `\u26A0\uFE0F ${trip.urgentItems} open question${trip.urgentItems > 1 ? "s" : ""}` });
+      urgent.createSpan({ text: `\u26A0\uFE0F ${trip.urgentItems} urgent item${trip.urgentItems > 1 ? "s" : ""}` });
     }
     if (trip.totalTasks > 0) {
       const progressWrapper = card.createDiv({ cls: "trip-card-progress" });
       this.renderProgressRing(progressWrapper, trip.readinessPercent);
     }
     card.addEventListener("click", () => {
-      if (trip.filePath) {
-        this.app.workspace.openLinkText(trip.filePath, "", false);
+      const path = trip.itineraryPath || trip.researchPath;
+      if (path) {
+        this.app.workspace.openLinkText(path, "", false);
       }
     });
   }
@@ -746,186 +700,126 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   }
 };
 
-// src/parsers/TripParser.ts
-var TripParser = class {
+// src/parsers/ResearchParser.ts
+var ResearchParser = class {
   constructor(app) {
     this.app = app;
   }
   async parseAll(folderPath) {
     const results = [];
-    const allFiles = this.app.vault.getMarkdownFiles();
-    console.log(`[TripParser] Total markdown files: ${allFiles.length}`);
-    const files = allFiles.filter(
-      (f) => f.path.startsWith(folderPath) && !f.basename.startsWith("_") && !f.path.includes("/pricing/")
-      // Exclude pricing subfolder
+    const folder = this.app.vault.getAbstractFileByPath(folderPath);
+    if (!folder)
+      return results;
+    const files = this.app.vault.getMarkdownFiles().filter(
+      (f) => f.path.startsWith(folderPath) && !f.basename.startsWith("_")
     );
-    console.log(`[TripParser] Files in ${folderPath}: ${files.length}`, files.map((f) => f.path));
     for (const file of files) {
-      const trip = await this.parse(file);
-      console.log(`[TripParser] Parsed ${file.path}:`, trip ? `\u2713 ${trip.destination}` : "\u2717 not a trip");
-      if (trip)
-        results.push(trip);
+      const data = await this.parse(file);
+      if (data)
+        results.push(data);
     }
     return results;
   }
   async parse(file) {
     const cache = this.app.metadataCache.getFileCache(file);
     const frontmatter = cache == null ? void 0 : cache.frontmatter;
-    if (!frontmatter || frontmatter.type !== "trip") {
+    if (!frontmatter)
       return null;
-    }
-    const content = await this.app.vault.read(file);
-    const { checkedTasks, totalTasks, urgentItems } = this.extractTasks(content);
-    const status = this.normalizeStatus(frontmatter.status);
-    const readiness = this.calculateReadiness(status, checkedTasks, totalTasks);
     return {
-      id: file.basename.toLowerCase().replace(/\s+/g, "-"),
+      path: file.path,
+      date: frontmatter.date || "",
       destination: frontmatter.destination || file.basename,
-      countryCode: this.getCountryCode(frontmatter.destination || ""),
-      dates: frontmatter.dates || "TBD",
+      tripTiming: frontmatter.trip_timing,
       duration: frontmatter.duration,
-      travelers: String(frontmatter.travelers || ""),
-      budget: frontmatter.budget,
-      status,
-      committed: frontmatter.committed === true,
-      window: frontmatter.window,
-      readinessPercent: readiness,
-      totalTasks,
-      urgentItems,
-      filePath: file.path,
-      created: frontmatter.created || "",
-      updated: frontmatter.updated,
-      flightConfirmation: frontmatter.flight_confirmation,
-      hotelConfirmation: frontmatter.hotel_confirmation,
-      lastUpdated: new Date(file.stat.mtime)
+      travelStyle: frontmatter.travel_style,
+      travelers: frontmatter.travelers,
+      status: this.normalizeStatus(frontmatter.status),
+      confidence: frontmatter.confidence || "medium",
+      dataFreshness: frontmatter.data_freshness
     };
   }
   normalizeStatus(status) {
     if (!status)
-      return "idea";
+      return "draft";
     const s = status.toLowerCase();
-    if (s === "idea")
-      return "idea";
-    if (s === "researching" || s === "research")
-      return "researching";
-    if (s === "planned" || s === "planning" || s === "draft" || s === "final")
-      return "planned";
-    if (s === "booked")
-      return "booked";
     if (s === "complete" || s === "completed")
       return "complete";
-    return "idea";
+    if (s === "in-progress" || s === "in progress")
+      return "in-progress";
+    return "draft";
+  }
+};
+
+// src/parsers/ItineraryParser.ts
+var ItineraryParser = class {
+  constructor(app) {
+    this.app = app;
+  }
+  async parseAll(folderPath) {
+    const results = [];
+    const files = this.app.vault.getMarkdownFiles().filter(
+      (f) => f.path.startsWith(folderPath) && !f.basename.startsWith("_") && !f.basename.includes("overview")
+    );
+    for (const file of files) {
+      const data = await this.parse(file);
+      if (data)
+        results.push(data);
+    }
+    return results;
+  }
+  async parse(file) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    const frontmatter = cache == null ? void 0 : cache.frontmatter;
+    const content = await this.app.vault.read(file);
+    if (!frontmatter)
+      return null;
+    const { urgentTasks, checkedTasks, totalTasks } = this.extractTasks(content);
+    return {
+      path: file.path,
+      date: frontmatter.date || "",
+      destination: frontmatter.destination || "",
+      tripDates: frontmatter.trip_dates || "",
+      duration: frontmatter.duration || "",
+      travelStyle: frontmatter.travel_style,
+      basedOn: frontmatter.based_on,
+      status: this.normalizeStatus(frontmatter.status),
+      committed: frontmatter.committed === true,
+      totalBudget: frontmatter.total_budget_estimate,
+      travelers: frontmatter.travelers || 1,
+      urgentTasks,
+      checkedTasks,
+      totalTasks
+    };
   }
   extractTasks(content) {
-    let urgentItems = 0;
-    const openQuestionsMatch = content.match(/## Open Questions[\s\S]*?(?=\n##|$)/i);
-    if (openQuestionsMatch) {
-      const uncheckedRegex = /- \[ \] /g;
-      const matches = openQuestionsMatch[0].match(uncheckedRegex);
-      urgentItems = (matches == null ? void 0 : matches.length) || 0;
-    }
-    const bookingChecklistMatch = content.match(/## (?:Booking )?Checklist[\s\S]*?(?=\n##|$)/i);
-    if (bookingChecklistMatch) {
-      const uncheckedRegex = /- \[ \] /g;
-      const matches = bookingChecklistMatch[0].match(uncheckedRegex);
-      urgentItems += (matches == null ? void 0 : matches.length) || 0;
+    const urgentTasks = [];
+    let checkedTasks = 0;
+    let totalTasks = 0;
+    const urgentMatch = content.match(/###\s*URGENT[\s\S]*?(?=###|$)/i);
+    if (urgentMatch) {
+      const taskRegex = /- \[ \] (.+)/g;
+      let match;
+      while ((match = taskRegex.exec(urgentMatch[0])) !== null) {
+        urgentTasks.push(match[1]);
+      }
     }
     const uncheckedMatches = content.match(/- \[ \] /g);
     const checkedMatches = content.match(/- \[x\] /gi);
-    const totalTasks = ((uncheckedMatches == null ? void 0 : uncheckedMatches.length) || 0) + ((checkedMatches == null ? void 0 : checkedMatches.length) || 0);
-    const checkedTasks = (checkedMatches == null ? void 0 : checkedMatches.length) || 0;
-    return { checkedTasks, totalTasks, urgentItems };
+    totalTasks = ((uncheckedMatches == null ? void 0 : uncheckedMatches.length) || 0) + ((checkedMatches == null ? void 0 : checkedMatches.length) || 0);
+    checkedTasks = (checkedMatches == null ? void 0 : checkedMatches.length) || 0;
+    return { urgentTasks, checkedTasks, totalTasks };
   }
-  calculateReadiness(status, checkedTasks, totalTasks) {
-    const baseReadiness = {
-      "idea": 10,
-      "researching": 30,
-      "planned": 60,
-      "booked": 90,
-      "complete": 100
-    };
-    let readiness = baseReadiness[status];
-    if (totalTasks > 0 && status !== "complete") {
-      const taskCompletion = checkedTasks / totalTasks;
-      const statusRange = this.getStatusRange(status);
-      readiness = statusRange.min + Math.round(taskCompletion * (statusRange.max - statusRange.min));
-    }
-    return Math.min(100, readiness);
-  }
-  getStatusRange(status) {
-    switch (status) {
-      case "idea":
-        return { min: 0, max: 20 };
-      case "researching":
-        return { min: 20, max: 45 };
-      case "planned":
-        return { min: 45, max: 75 };
-      case "booked":
-        return { min: 75, max: 100 };
-      case "complete":
-        return { min: 100, max: 100 };
-    }
-  }
-  getCountryCode(destination) {
-    const codes = {
-      "peru": "\u{1F1F5}\u{1F1EA}",
-      "mexico": "\u{1F1F2}\u{1F1FD}",
-      "cabo": "\u{1F1F2}\u{1F1FD}",
-      "cabo san lucas": "\u{1F1F2}\u{1F1FD}",
-      "costa rica": "\u{1F1E8}\u{1F1F7}",
-      "japan": "\u{1F1EF}\u{1F1F5}",
-      "iceland": "\u{1F1EE}\u{1F1F8}",
-      "france": "\u{1F1EB}\u{1F1F7}",
-      "paris": "\u{1F1EB}\u{1F1F7}",
-      "italy": "\u{1F1EE}\u{1F1F9}",
-      "spain": "\u{1F1EA}\u{1F1F8}",
-      "uk": "\u{1F1EC}\u{1F1E7}",
-      "england": "\u{1F1EC}\u{1F1E7}",
-      "greece": "\u{1F1EC}\u{1F1F7}",
-      "portugal": "\u{1F1F5}\u{1F1F9}",
-      "germany": "\u{1F1E9}\u{1F1EA}",
-      "australia": "\u{1F1E6}\u{1F1FA}",
-      "new zealand": "\u{1F1F3}\u{1F1FF}",
-      "thailand": "\u{1F1F9}\u{1F1ED}",
-      "vietnam": "\u{1F1FB}\u{1F1F3}",
-      "croatia": "\u{1F1ED}\u{1F1F7}",
-      "norway": "\u{1F1F3}\u{1F1F4}",
-      "sweden": "\u{1F1F8}\u{1F1EA}",
-      "netherlands": "\u{1F1F3}\u{1F1F1}",
-      "amsterdam": "\u{1F1F3}\u{1F1F1}",
-      "switzerland": "\u{1F1E8}\u{1F1ED}",
-      "austria": "\u{1F1E6}\u{1F1F9}",
-      "ireland": "\u{1F1EE}\u{1F1EA}",
-      "scotland": "\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}",
-      "canada": "\u{1F1E8}\u{1F1E6}",
-      "hawaii": "\u{1F1FA}\u{1F1F8}",
-      "caribbean": "\u{1F3DD}\uFE0F",
-      "bali": "\u{1F1EE}\u{1F1E9}",
-      "indonesia": "\u{1F1EE}\u{1F1E9}",
-      "philippines": "\u{1F1F5}\u{1F1ED}",
-      "singapore": "\u{1F1F8}\u{1F1EC}",
-      "hong kong": "\u{1F1ED}\u{1F1F0}",
-      "south korea": "\u{1F1F0}\u{1F1F7}",
-      "korea": "\u{1F1F0}\u{1F1F7}",
-      "taiwan": "\u{1F1F9}\u{1F1FC}",
-      "china": "\u{1F1E8}\u{1F1F3}",
-      "india": "\u{1F1EE}\u{1F1F3}",
-      "morocco": "\u{1F1F2}\u{1F1E6}",
-      "egypt": "\u{1F1EA}\u{1F1EC}",
-      "south africa": "\u{1F1FF}\u{1F1E6}",
-      "brazil": "\u{1F1E7}\u{1F1F7}",
-      "argentina": "\u{1F1E6}\u{1F1F7}",
-      "chile": "\u{1F1E8}\u{1F1F1}",
-      "colombia": "\u{1F1E8}\u{1F1F4}",
-      "ecuador": "\u{1F1EA}\u{1F1E8}",
-      "galapagos": "\u{1F1EA}\u{1F1E8}"
-    };
-    const lower = destination.toLowerCase();
-    for (const [key, code] of Object.entries(codes)) {
-      if (lower.includes(key))
-        return code;
-    }
-    return "\u{1F30D}";
+  normalizeStatus(status) {
+    if (!status)
+      return "draft";
+    const s = status.toLowerCase();
+    if (s === "final" || s === "finalized")
+      return "final";
+    if (s === "booked")
+      return "booked";
+    if (s === "completed" || s === "complete")
+      return "completed";
+    return "draft";
   }
 };
 
@@ -1060,8 +954,54 @@ var PricingParser = class {
   }
 };
 
-// src/parsers/DealsParser.ts
+// src/parsers/GapsParser.ts
 var import_obsidian2 = require("obsidian");
+var GapsParser = class {
+  constructor(app) {
+    this.app = app;
+  }
+  async parse(filePath) {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (!file || !(file instanceof import_obsidian2.TFile))
+      return [];
+    const content = await this.app.vault.read(file);
+    return this.parseContent(content);
+  }
+  parseContent(content) {
+    const gaps = [];
+    const sections = content.split(/(?=###\s+[^#])/);
+    for (const section of sections) {
+      const headerMatch = section.match(/###\s+([^\n(]+)/);
+      if (!headerMatch)
+        continue;
+      const destination = headerMatch[1].trim();
+      let currentPriority = "nice-to-have";
+      const lines = section.split("\n");
+      for (const line of lines) {
+        if (/urgent/i.test(line) && !line.startsWith("-")) {
+          currentPriority = "urgent";
+        } else if (/before\s*booking/i.test(line) && !line.startsWith("-")) {
+          currentPriority = "before-booking";
+        } else if (/nice\s*to/i.test(line) && !line.startsWith("-")) {
+          currentPriority = "nice-to-have";
+        }
+        const taskMatch = line.match(/^-\s*\[([ xX])\]\s*(.+)/);
+        if (taskMatch) {
+          gaps.push({
+            destination,
+            priority: currentPriority,
+            question: taskMatch[2].trim(),
+            checked: taskMatch[1].toLowerCase() === "x"
+          });
+        }
+      }
+    }
+    return gaps;
+  }
+};
+
+// src/parsers/DealsParser.ts
+var import_obsidian3 = require("obsidian");
 var DealsParser = class {
   constructor(app) {
     this.app = app;
@@ -1081,37 +1021,31 @@ var DealsParser = class {
     const deals = [];
     const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/);
     const alertDate = dateMatch ? dateMatch[1] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const greatDealsSection = content.match(/## (?:🟢\s*)?Great Deals Found[^\n]*[\s\S]*?(?=\n## (?:🎆|All|Asia|Good|Best|\d)|---\s*$|$)/i);
+    const greatDealsSection = content.match(/## 🟢 Great Deals Found[\s\S]*?(?=## 🎯|## 📊|## 💡|$)/);
     if (!greatDealsSection)
       return deals;
-    const dealBlocks = greatDealsSection[0].split(/###\s+(?:\d+\.\s*)?/).filter((b) => b.trim());
+    const dealPattern = /### \d+\.\s+([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/gi;
+    const datePattern = /\*\*Best dates\*\*:\s*([^\n]+)/gi;
+    const typicalPattern = /\*\*Typical price\*\*:\s*~?\$([0-9,]+)/gi;
+    const windowPattern = /✅\s*\*\*([^*]+)\*\*|✅\s+([^\n-]+?)(?:\s*-|\s*$)/gi;
+    let match;
+    const dealBlocks = greatDealsSection[0].split(/### \d+\./);
     for (const block of dealBlocks) {
       if (!block.trim())
         continue;
-      const headerMatch = block.match(/^([^-\n]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
+      const headerMatch = block.match(/([^-]+)\s*-\s*\$([0-9,]+)\s*RT\s*\((\d+)%\s*off!?\)(\s*⭐\s*BUCKET LIST)?/i);
       if (!headerMatch)
         continue;
       const destination = headerMatch[1].trim();
       const price = parseInt(headerMatch[2].replace(/,/g, ""));
       const percentOff = parseInt(headerMatch[3]);
       const isBucketList = !!headerMatch[4];
-      const datesMatch = block.match(/\*\*(?:Best )?[Dd]ates?\*\*:\s*([^\n]+)/i);
+      const datesMatch = block.match(/\*\*Best dates\*\*:\s*([^\n]+)/i);
       const dates = datesMatch ? datesMatch[1].trim() : "";
       const typicalMatch = block.match(/\*\*Typical price\*\*:\s*~?\$([0-9,]+)/i);
       const typicalPrice = typicalMatch ? parseInt(typicalMatch[1].replace(/,/g, "")) : Math.round(price / (1 - percentOff / 100));
-      let windowMatch;
-      const oldStyleMatch = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
-      const newStyleMatch = block.match(/\*\*Window match\*\*:\s*([^\n]+)/i);
-      if (newStyleMatch) {
-        const matchText = newStyleMatch[1].trim();
-        if (matchText.startsWith("Close to ")) {
-          windowMatch = matchText.replace("Close to ", "").replace(/\s*\([^)]+\)/, "").trim();
-        } else if (!matchText.includes("Requires PTO")) {
-          windowMatch = matchText;
-        }
-      } else if (oldStyleMatch) {
-        windowMatch = (oldStyleMatch[1] || oldStyleMatch[2] || "").trim();
-      }
+      const windowMatches = block.match(/✅\s*\*\*([^*]+)\*\*|✅\s+([^\n]+?)(?:\s*-|$)/i);
+      const windowMatch = windowMatches ? (windowMatches[1] || windowMatches[2] || "").trim() : void 0;
       deals.push({
         destination,
         price,
@@ -1127,7 +1061,7 @@ var DealsParser = class {
   }
   async parse(filePath) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!file || !(file instanceof import_obsidian2.TFile))
+    if (!file || !(file instanceof import_obsidian3.TFile))
       return [];
     const content = await this.app.vault.read(file);
     return this.parseDestinationIntelligence(content);
@@ -1209,14 +1143,14 @@ var DealsParser = class {
 };
 
 // src/parsers/TravelWindowParser.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 var TravelWindowParser = class {
   constructor(app) {
     this.app = app;
   }
   async parse(profilePath) {
     const file = this.app.vault.getAbstractFileByPath(profilePath);
-    if (!file || !(file instanceof import_obsidian3.TFile)) {
+    if (!file || !(file instanceof import_obsidian4.TFile)) {
       return [];
     }
     const content = await this.app.vault.read(file);
@@ -1396,38 +1330,40 @@ var DataService = class {
   constructor(app) {
     this.app = app;
     // Paths relative to vault root
-    // Unified trip model - all trip files now in Personal/travel with type: trip
-    this.tripPath = "Personal/travel";
+    this.basePath = "Personal/travel";
+    this.researchPath = "Personal/travel/research";
+    this.itineraryPath = "Personal/travel/trips";
     this.pricingPath = "Personal/travel/pricing/snapshots";
+    this.gapsPath = "Personal/travel/questions.md";
     this.intelPath = "Personal/travel/pricing/destination-intelligence.md";
-    this.profilePath = "_state/travel-profile.md";
-    // Moved to _state per JoshOS convention
+    this.profilePath = "Personal/travel/travel-profile.md";
     this.inboxPath = "_inbox";
-    this.tripParser = new TripParser(app);
+    this.researchParser = new ResearchParser(app);
+    this.itineraryParser = new ItineraryParser(app);
     this.pricingParser = new PricingParser(app);
+    this.gapsParser = new GapsParser(app);
     this.dealsParser = new DealsParser(app);
     this.windowParser = new TravelWindowParser(app);
   }
   async loadAll() {
-    console.log("[TravelDashboard] Loading data...");
-    const [trips, prices, allDeals, travelWindows, discoveredDeals] = await Promise.all([
-      this.tripParser.parseAll(this.tripPath),
+    const [research, itineraries, prices, gaps, allDeals, travelWindows, discoveredDeals] = await Promise.all([
+      this.researchParser.parseAll(this.researchPath),
+      this.itineraryParser.parseAll(this.itineraryPath),
       this.pricingParser.parseAll(this.pricingPath),
+      this.gapsParser.parse(this.gapsPath),
       this.dealsParser.parse(this.intelPath),
       this.windowParser.parse(this.profilePath),
       this.dealsParser.parseDiscoveredDeals(this.inboxPath)
     ]);
-    console.log("[TravelDashboard] Loaded:", { trips: trips.length, prices: prices.length, windows: travelWindows.length, deals: discoveredDeals.length });
-    const tripsByStatus = this.groupTripsByStatus(trips);
-    const deadlines = this.buildDeadlinesFromTrips(trips, prices);
+    const trips = this.buildTrips(research, itineraries, gaps);
+    const deadlines = this.buildDeadlines(itineraries, gaps, prices);
     const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
     const milestones = await this.parseMilestones();
-    const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.dates, b.dates))[0] || null;
+    const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates))[0] || null;
     const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
     const actionItems = this.buildActionItems(travelWindows, discoveredDeals, trips);
     return {
       trips,
-      tripsByStatus,
       committedTrip,
       nextWindow,
       travelWindows,
@@ -1439,58 +1375,6 @@ var DataService = class {
       discoveredDeals,
       lastRefresh: /* @__PURE__ */ new Date()
     };
-  }
-  /**
-   * Group trips by their status for dashboard display
-   */
-  groupTripsByStatus(trips) {
-    const grouped = {
-      idea: [],
-      researching: [],
-      planned: [],
-      booked: [],
-      complete: []
-    };
-    for (const trip of trips) {
-      grouped[trip.status].push(trip);
-    }
-    for (const status of Object.keys(grouped)) {
-      grouped[status].sort((a, b) => this.compareTripDates(a.dates, b.dates));
-    }
-    return grouped;
-  }
-  /**
-   * Build deadlines from trips (urgent items and booking tasks)
-   */
-  buildDeadlinesFromTrips(trips, prices) {
-    const deadlines = [];
-    for (const trip of trips) {
-      if (trip.urgentItems > 0 && trip.status !== "complete") {
-        deadlines.push({
-          id: `trip-${trip.id}-urgent`,
-          destination: trip.destination,
-          description: `${trip.urgentItems} open question${trip.urgentItems > 1 ? "s" : ""} to resolve`,
-          date: "ASAP",
-          daysRemaining: 0,
-          priority: "urgent",
-          source: trip.filePath
-        });
-      }
-    }
-    for (const price of prices) {
-      if (price.daysSinceCapture > 14) {
-        deadlines.push({
-          id: `price-${price.destination}`,
-          destination: price.destination,
-          description: `Update pricing (${price.daysSinceCapture} days old)`,
-          date: "Stale",
-          daysRemaining: 0,
-          priority: "soon",
-          source: "pricing"
-        });
-      }
-    }
-    return deadlines.sort((a, b) => a.daysRemaining - b.daysRemaining);
   }
   /**
    * Build action items: deals that match upcoming windows + windows with no planned trip
@@ -1526,7 +1410,7 @@ var DataService = class {
     for (const window of upcomingWindows) {
       const daysAway = Math.floor((window.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
       const hasPlannedTrip = trips.some((trip) => {
-        const tripDate = this.extractDate(trip.dates);
+        const tripDate = this.extractDate(trip.tripDates);
         if (!tripDate)
           return false;
         return this.datesOverlap(tripDate, tripDate, window.startDate, window.endDate);
@@ -1551,10 +1435,7 @@ var DataService = class {
     });
   }
   /**
-   * Parse deal dates - handles multiple formats:
-   * - ISO format: "2026-05-05"
-   * - Range: "Feb 15-22" or "Mar 1-8"
-   * - Cross-month: "Feb 15 - Mar 2"
+   * Parse deal dates like "Feb 15-22" or "Mar 1-8"
    */
   parseDealDates(dateStr) {
     if (!dateStr)
@@ -1573,15 +1454,6 @@ var DataService = class {
       "nov": 10,
       "dec": 11
     };
-    const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) {
-      const year2 = parseInt(isoMatch[1]);
-      const month = parseInt(isoMatch[2]) - 1;
-      const day = parseInt(isoMatch[3]);
-      const startDate = new Date(year2, month, day);
-      const endDate = new Date(year2, month, day + 7);
-      return { start: startDate, end: endDate };
-    }
     const year = (/* @__PURE__ */ new Date()).getFullYear();
     const sameMonthMatch = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})/i);
     if (sameMonthMatch) {
@@ -1611,6 +1483,177 @@ var DataService = class {
    */
   datesOverlap(start1, end1, start2, end2) {
     return start1 <= end2 && end1 >= start2;
+  }
+  buildTrips(research, itineraries, gaps) {
+    const tripMap = /* @__PURE__ */ new Map();
+    for (const itin of itineraries) {
+      const dest = this.normalizeDestination(itin.destination);
+      const urgentCount = gaps.filter(
+        (g) => this.normalizeDestination(g.destination) === dest && g.priority === "urgent" && !g.checked
+      ).length;
+      const readiness = this.calculateReadiness(itin);
+      tripMap.set(dest, {
+        id: dest.toLowerCase().replace(/\s+/g, "-"),
+        destination: itin.destination,
+        countryCode: this.getCountryCode(itin.destination),
+        tripDates: itin.tripDates,
+        duration: itin.duration,
+        travelers: itin.travelers,
+        budget: itin.totalBudget || "TBD",
+        status: this.mapItineraryStatus(itin.status),
+        committed: itin.committed,
+        readinessPercent: readiness,
+        totalTasks: itin.totalTasks || 0,
+        urgentItems: urgentCount,
+        itineraryPath: itin.path,
+        lastUpdated: /* @__PURE__ */ new Date()
+      });
+    }
+    for (const res of research) {
+      const dest = this.normalizeDestination(res.destination);
+      if (!tripMap.has(dest)) {
+        tripMap.set(dest, {
+          id: dest.toLowerCase().replace(/\s+/g, "-"),
+          destination: res.destination,
+          countryCode: this.getCountryCode(res.destination),
+          tripDates: res.tripTiming || "TBD",
+          duration: res.duration || "TBD",
+          travelers: res.travelers || 1,
+          budget: "TBD",
+          status: "research",
+          committed: false,
+          readinessPercent: 0,
+          totalTasks: 0,
+          urgentItems: 0,
+          researchPath: res.path,
+          lastUpdated: /* @__PURE__ */ new Date()
+        });
+      } else {
+        const trip = tripMap.get(dest);
+        trip.researchPath = res.path;
+      }
+    }
+    return Array.from(tripMap.values()).filter((t) => this.isActiveTrip(t)).sort((a, b) => this.compareTripDates(a.tripDates, b.tripDates));
+  }
+  buildDeadlines(itineraries, gaps, prices) {
+    const deadlines = [];
+    const now = /* @__PURE__ */ new Date();
+    for (const gap of gaps) {
+      if (gap.priority === "urgent" && !gap.checked) {
+        deadlines.push({
+          id: `gap-${gap.destination}-${gap.question.slice(0, 20)}`,
+          destination: gap.destination,
+          description: gap.question,
+          date: "ASAP",
+          daysRemaining: 0,
+          priority: "urgent",
+          source: "gaps"
+        });
+      }
+    }
+    for (const itin of itineraries) {
+      for (const task of itin.urgentTasks) {
+        const dateMatch = task.match(/by\s+(\w+\s+\d+|\d+\/\d+)/i);
+        const daysRemaining = dateMatch ? this.estimateDaysRemaining(dateMatch[1]) : 14;
+        deadlines.push({
+          id: `itin-${itin.destination}-${task.slice(0, 20)}`,
+          destination: itin.destination,
+          description: task,
+          date: dateMatch ? dateMatch[1] : "Soon",
+          daysRemaining,
+          priority: daysRemaining <= 14 ? "urgent" : daysRemaining <= 30 ? "soon" : "upcoming",
+          source: "itinerary"
+        });
+      }
+    }
+    for (const price of prices) {
+      if (price.daysSinceCapture > 14) {
+        deadlines.push({
+          id: `price-${price.destination}`,
+          destination: price.destination,
+          description: `Update pricing (${price.daysSinceCapture} days old)`,
+          date: "Stale",
+          daysRemaining: 0,
+          priority: "soon",
+          source: "pricing"
+        });
+      }
+    }
+    return deadlines.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  }
+  calculateReadiness(itin) {
+    let readiness = 0;
+    switch (itin.status) {
+      case "draft":
+        readiness = 40;
+        break;
+      case "final":
+        readiness = 70;
+        break;
+      case "booked":
+        readiness = 90;
+        break;
+      case "completed":
+        readiness = 100;
+        break;
+    }
+    if (itin.totalTasks > 0) {
+      const taskCompletion = itin.checkedTasks / itin.totalTasks;
+      readiness = Math.round(readiness * 0.7 + taskCompletion * 30);
+    }
+    return Math.min(100, readiness);
+  }
+  normalizeDestination(dest) {
+    return dest.toLowerCase().replace(/,.*$/, "").replace(/\s+/g, " ").trim();
+  }
+  getCountryCode(destination) {
+    const codes = {
+      "peru": "\u{1F1F5}\u{1F1EA}",
+      "mexico": "\u{1F1F2}\u{1F1FD}",
+      "cabo": "\u{1F1F2}\u{1F1FD}",
+      "cabo san lucas": "\u{1F1F2}\u{1F1FD}",
+      "japan": "\u{1F1EF}\u{1F1F5}",
+      "iceland": "\u{1F1EE}\u{1F1F8}",
+      "france": "\u{1F1EB}\u{1F1F7}",
+      "paris": "\u{1F1EB}\u{1F1F7}",
+      "italy": "\u{1F1EE}\u{1F1F9}",
+      "spain": "\u{1F1EA}\u{1F1F8}",
+      "uk": "\u{1F1EC}\u{1F1E7}",
+      "england": "\u{1F1EC}\u{1F1E7}",
+      "greece": "\u{1F1EC}\u{1F1F7}",
+      "portugal": "\u{1F1F5}\u{1F1F9}",
+      "germany": "\u{1F1E9}\u{1F1EA}",
+      "australia": "\u{1F1E6}\u{1F1FA}",
+      "new zealand": "\u{1F1F3}\u{1F1FF}",
+      "thailand": "\u{1F1F9}\u{1F1ED}",
+      "vietnam": "\u{1F1FB}\u{1F1F3}",
+      "costa rica": "\u{1F1E8}\u{1F1F7}"
+    };
+    const lower = destination.toLowerCase();
+    for (const [key, code] of Object.entries(codes)) {
+      if (lower.includes(key))
+        return code;
+    }
+    return "\u{1F30D}";
+  }
+  mapItineraryStatus(status) {
+    switch (status) {
+      case "draft":
+        return "planning";
+      case "final":
+        return "planning";
+      case "booked":
+        return "booked";
+      case "completed":
+        return "complete";
+      default:
+        return "planning";
+    }
+  }
+  isActiveTrip(trip) {
+    if (trip.status === "complete")
+      return false;
+    return true;
   }
   compareTripDates(a, b) {
     const dateA = this.extractDate(a);
@@ -1654,6 +1697,16 @@ var DataService = class {
       }
     }
     return null;
+  }
+  estimateDaysRemaining(dateStr) {
+    try {
+      const target = new Date(dateStr);
+      const now = /* @__PURE__ */ new Date();
+      const diff = target.getTime() - now.getTime();
+      return Math.max(0, Math.floor(diff / (1e3 * 60 * 60 * 24)));
+    } catch (e) {
+      return 30;
+    }
   }
   /**
    * Parse Important Dates from travel-profile.md
@@ -1738,7 +1791,7 @@ var DataService = class {
 };
 
 // src/main.ts
-var TravelDashboardPlugin = class extends import_obsidian4.Plugin {
+var TravelDashboardPlugin = class extends import_obsidian5.Plugin {
   constructor() {
     super(...arguments);
     this.refreshTimeout = null;
