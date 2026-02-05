@@ -61,22 +61,84 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     });
   }
   render() {
-    const container = this.contentEl;
+    const container = this.containerEl.children[1];
     container.empty();
-    container.addClass("travel-dashboard");
     if (!this.data) {
-      container.createEl("div", { text: "Loading...", cls: "travel-loading" });
+      container.innerHTML = '<div style="padding:20px;">Loading...</div>';
       return;
     }
-    this.renderHeader(container);
-    this.renderActionRequiredSection(container);
-    this.renderHeroSection(container);
-    this.renderMilestonesSection(container);
-    this.renderTripsSection(container);
-    this.renderDealsSection(container);
-    this.renderDeadlinesSection(container);
-    this.renderPricesSection(container);
-    this.renderActionsSection(container);
+    let html = `<div style="padding: 16px; font-family: var(--font-interface); overflow-y: auto;">`;
+    html += `<h2 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-muted);">TRAVEL DASHBOARD</h2>`;
+    if (this.data.committedTrip) {
+      const trip = this.data.committedTrip;
+      html += `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 24px; font-weight: bold;">${trip.destination}</div>
+                    <div style="opacity: 0.9; margin-top: 4px;">${trip.dates}</div>
+                    <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">COMMITTED</div>
+                </div>
+            `;
+    } else if (this.data.nextWindow) {
+      const w = this.data.nextWindow;
+      html += `
+                <div style="background: var(--background-secondary); padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 3px solid var(--interactive-accent);">
+                    <div style="font-weight: 600;">Next Window: ${w.name}</div>
+                    <div style="color: var(--text-muted); font-size: 13px;">${w.dates} \xB7 ${w.duration}</div>
+                </div>
+            `;
+    }
+    const statuses = ["booked", "planned", "researching", "idea"];
+    for (const status of statuses) {
+      const trips = this.data.tripsByStatus[status];
+      if (trips.length > 0) {
+        html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">${status.toUpperCase()}</h3>`;
+        for (const trip of trips) {
+          const borderColor = status === "booked" ? "#4CAF50" : status === "planned" ? "#2196F3" : status === "researching" ? "#FF9800" : "#9E9E9E";
+          html += `
+                        <div style="background: var(--background-secondary); padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="app.workspace.openLinkText('${trip.filePath}', '', false)">
+                            <div style="font-weight: 600; font-size: 15px;">${trip.countryCode || "\u{1F30D}"} ${trip.destination}</div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">${trip.dates}${trip.duration ? " \xB7 " + trip.duration : ""}</div>
+                            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">${trip.travelers}</div>
+                        </div>
+                    `;
+        }
+      }
+    }
+    if (this.data.discoveredDeals.length > 0) {
+      html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">DEALS</h3>`;
+      for (const deal of this.data.discoveredDeals.slice(0, 5)) {
+        html += `
+                    <div style="background: var(--background-secondary); padding: 10px 14px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${deal.destination}</span>
+                        <span style="color: #4CAF50; font-weight: 600;">$${deal.price} <span style="font-size: 11px; opacity: 0.7;">(-${deal.percentOff}%)</span></span>
+                    </div>
+                `;
+      }
+    }
+    html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">DEADLINES</h3>`;
+    if (this.data.deadlines.length === 0) {
+      html += `<p style="color: var(--text-muted); font-size: 13px;">No upcoming deadlines</p>`;
+    } else {
+      for (const d of this.data.deadlines.slice(0, 5)) {
+        html += `<div style="padding: 8px 0; border-bottom: 1px solid var(--background-modifier-border); font-size: 13px;">${d.description} \xB7 ${d.destination}</div>`;
+      }
+    }
+    if (this.data.prices.length > 0) {
+      html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">PRICES</h3>`;
+      for (const p of this.data.prices) {
+        html += `
+                    <div style="background: var(--background-secondary); padding: 10px 14px; margin-bottom: 6px; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>${p.destination}</span>
+                            <span style="font-weight: 600;">$${p.pricePerPerson}/person</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${p.route} \xB7 ${p.daysSinceCapture}d ago</div>
+                    </div>
+                `;
+      }
+    }
+    html += `</div>`;
+    container.innerHTML = html;
   }
   renderHeader(container) {
     const header = container.createDiv({ cls: "dashboard-header" });
@@ -384,7 +446,10 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
   renderTripsSection(container) {
     var _a;
     const tripsByStatus = (_a = this.data) == null ? void 0 : _a.tripsByStatus;
+    console.log("[TravelDashboard] renderTripsSection - tripsByStatus:", tripsByStatus);
+    console.log("[TravelDashboard] renderTripsSection - planned trips:", tripsByStatus == null ? void 0 : tripsByStatus.planned);
     if (!tripsByStatus) {
+      console.log("[TravelDashboard] renderTripsSection - NO tripsByStatus, returning");
       return;
     }
     const statusGroups = [
