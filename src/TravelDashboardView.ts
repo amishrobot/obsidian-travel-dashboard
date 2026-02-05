@@ -482,16 +482,42 @@ export class TravelDashboardView extends ItemView {
     }
 
     private renderTripsSection(container: Element) {
-        const section = container.createDiv({ cls: 'dashboard-section' });
-        section.createEl('h3', { text: 'RESEARCHING' });
+        const tripsByStatus = this.data?.tripsByStatus;
+        if (!tripsByStatus) return;
 
-        if (!this.data?.trips.length) {
-            section.createDiv({ text: 'No trips being researched', cls: 'empty-state' });
-            return;
+        // Define which status groups to show and their display names
+        const statusGroups: Array<{ status: keyof typeof tripsByStatus; label: string; showIfEmpty: boolean }> = [
+            { status: 'booked', label: 'BOOKED', showIfEmpty: false },
+            { status: 'planned', label: 'PLANNED', showIfEmpty: false },
+            { status: 'researching', label: 'RESEARCHING', showIfEmpty: false },
+            { status: 'idea', label: 'IDEAS', showIfEmpty: false },
+        ];
+
+        // Track if any trips were shown
+        let anyTripsShown = false;
+
+        for (const { status, label, showIfEmpty } of statusGroups) {
+            const trips = tripsByStatus[status];
+            if (!trips.length && !showIfEmpty) continue;
+
+            const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
+            section.createEl('h3', { text: label });
+
+            if (!trips.length) {
+                section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: 'empty-state' });
+            } else {
+                for (const trip of trips) {
+                    this.renderTripCard(section, trip);
+                }
+                anyTripsShown = true;
+            }
         }
 
-        for (const trip of this.data.trips) {
-            this.renderTripCard(section, trip);
+        // If no trips at all, show a single empty state
+        if (!anyTripsShown) {
+            const section = container.createDiv({ cls: 'dashboard-section' });
+            section.createEl('h3', { text: 'TRIPS' });
+            section.createDiv({ text: 'No trips yet. Run /travel.research to start planning!', cls: 'empty-state' });
         }
     }
 
@@ -508,28 +534,29 @@ export class TravelDashboardView extends ItemView {
 
         // Dates and duration
         const dates = content.createDiv({ cls: 'trip-dates' });
-        dates.createSpan({ text: trip.tripDates });
+        dates.createSpan({ text: trip.dates });
         if (trip.duration && trip.duration !== 'TBD') {
             dates.createSpan({ text: ` (${trip.duration})`, cls: 'trip-duration' });
         }
 
-        // Meta info
+        // Meta info - travelers is now a string like "6 (Josh, Adrienne, ...)"
         const meta = content.createDiv({ cls: 'trip-meta' });
-        meta.createSpan({ text: `${trip.travelers} traveler${trip.travelers > 1 ? 's' : ''}` });
+        meta.createSpan({ text: trip.travelers || 'TBD' });
         if (trip.budget && trip.budget !== 'TBD') {
             meta.createSpan({ text: ' | ' });
             meta.createSpan({ text: trip.budget });
         }
 
-        // Status badge
-        const statusClass = `status-${trip.status}`;
-        const status = content.createDiv({ cls: `trip-status ${statusClass}` });
-        status.createSpan({ text: trip.status.toUpperCase() });
+        // Window badge if set
+        if (trip.window) {
+            const windowBadge = content.createDiv({ cls: 'trip-window' });
+            windowBadge.createSpan({ text: trip.window });
+        }
 
         // Urgent items warning
         if (trip.urgentItems > 0) {
             const urgent = content.createDiv({ cls: 'trip-urgent' });
-            urgent.createSpan({ text: `⚠️ ${trip.urgentItems} urgent item${trip.urgentItems > 1 ? 's' : ''}` });
+            urgent.createSpan({ text: `⚠️ ${trip.urgentItems} open question${trip.urgentItems > 1 ? 's' : ''}` });
         }
 
         // Right side progress ring - only show if trip has actual tasks
@@ -538,11 +565,10 @@ export class TravelDashboardView extends ItemView {
             this.renderProgressRing(progressWrapper, trip.readinessPercent);
         }
 
-        // Click to open itinerary or research
+        // Click to open trip file
         card.addEventListener('click', () => {
-            const path = trip.itineraryPath || trip.researchPath;
-            if (path) {
-                this.app.workspace.openLinkText(path, '', false);
+            if (trip.filePath) {
+                this.app.workspace.openLinkText(trip.filePath, '', false);
             }
         });
     }

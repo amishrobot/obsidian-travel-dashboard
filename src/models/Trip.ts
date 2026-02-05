@@ -1,18 +1,28 @@
+/**
+ * Trip status lifecycle following the trip-schema.md
+ * idea --> researching --> planned --> booked --> complete
+ */
+export type TripStatus = 'idea' | 'researching' | 'planned' | 'booked' | 'complete';
+
 export interface Trip {
     id: string;
     destination: string;
     countryCode?: string;
-    tripDates: string;
-    duration: string;
-    travelers: number;
-    budget: string;
-    status: 'research' | 'planning' | 'booked' | 'traveling' | 'complete';
+    dates: string;           // From frontmatter 'dates' field
+    duration?: string;
+    travelers: string;       // Now a string like "6 (Josh, Adrienne, ...)"
+    budget?: string;
+    status: TripStatus;
     committed: boolean;
+    window?: string;         // Travel window name from profile
     readinessPercent: number;
     totalTasks: number;
     urgentItems: number;
-    researchPath?: string;
-    itineraryPath?: string;
+    filePath: string;        // Path to the trip file
+    created: string;         // ISO date when file was created
+    updated?: string;        // ISO date when last updated
+    flightConfirmation?: string;
+    hotelConfirmation?: string;
     lastUpdated: Date;
 }
 
@@ -93,8 +103,20 @@ export interface DiscoveredDeal {
     alertDate: string;
 }
 
+/**
+ * Trips grouped by status for dashboard display
+ */
+export interface TripsByStatus {
+    idea: Trip[];
+    researching: Trip[];
+    planned: Trip[];
+    booked: Trip[];
+    complete: Trip[];
+}
+
 export interface DashboardData {
     trips: Trip[];
+    tripsByStatus: TripsByStatus;
     committedTrip: Trip | null;
     nextWindow: TravelWindow | null;
     travelWindows: TravelWindow[];
