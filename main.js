@@ -87,6 +87,39 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
                 </div>
             `;
     }
+    if (this.data.milestones.length > 0) {
+      const upcoming = this.data.milestones.filter((m) => m.daysUntil <= 90);
+      if (upcoming.length > 0) {
+        html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">COMING UP</h3>`;
+        for (const m of upcoming) {
+          const urgency = m.daysUntil <= 14 ? "#e74c3c" : m.daysUntil <= 30 ? "#f39c12" : "var(--text-muted)";
+          html += `
+                        <div style="background: var(--background-secondary); padding: 10px 14px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>${m.emoji} ${m.name}</span>
+                            <span style="color: ${urgency}; font-weight: 500;">${m.daysUntil === 0 ? "Today!" : m.daysUntil === 1 ? "Tomorrow!" : m.daysUntil + " days"}</span>
+                        </div>
+                    `;
+        }
+      }
+    }
+    if (this.data.travelWindows.length > 0) {
+      const now = /* @__PURE__ */ new Date();
+      const upcomingWindows = this.data.travelWindows.filter((w) => w.startDate > now).slice(0, 4);
+      if (upcomingWindows.length > 0) {
+        html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">TRAVEL WINDOWS</h3>`;
+        for (const w of upcomingWindows) {
+          const daysUntil = Math.floor((w.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
+          const isTopPick = w.isTopPick ? "\u2B50 " : "";
+          html += `
+                        <div style="background: var(--background-secondary); padding: 12px 14px; margin-bottom: 6px; border-radius: 6px;${w.isTopPick ? " border-left: 3px solid #f39c12;" : ""}">
+                            <div style="font-weight: 600;">${isTopPick}${w.name}</div>
+                            <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${w.dates} \xB7 ${w.duration} \xB7 ${w.ptoNeeded} PTO</div>
+                            <div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${daysUntil} days away \xB7 ${w.whoCanGo}</div>
+                        </div>
+                    `;
+        }
+      }
+    }
     const statuses = ["booked", "planned", "researching", "idea"];
     for (const status of statuses) {
       const trips = this.data.tripsByStatus[status];
