@@ -52,22 +52,31 @@ export class TravelDashboardView extends ItemView {
     render() {
         const container = this.contentEl;
         container.empty();
-        container.addClass('travel-dashboard');
 
-        if (!this.data) {
-            container.createEl('div', { text: 'Loading...', cls: 'travel-loading' });
-            return;
+        // MINIMAL TEST - just show basic content
+        const wrapper = container.createDiv();
+        wrapper.style.padding = '20px';
+        wrapper.style.backgroundColor = '#f0f0f0';
+
+        wrapper.createEl('h1', { text: 'TRAVEL DASHBOARD' });
+        wrapper.createEl('p', { text: 'If you can see this, the view is working!' });
+
+        if (this.data) {
+            wrapper.createEl('p', { text: `Trips loaded: ${this.data.trips.length}` });
+            wrapper.createEl('p', { text: `Deals loaded: ${this.data.deals.length}` });
+
+            // Show trip names
+            if (this.data.trips.length > 0) {
+                const list = wrapper.createEl('ul');
+                for (const trip of this.data.trips) {
+                    list.createEl('li', { text: `${trip.destination} - ${trip.status}` });
+                }
+            }
+        } else {
+            wrapper.createEl('p', { text: 'No data loaded yet...' });
         }
 
-        console.log('[TravelDashboard] Starting render with data:', {
-            tripsCount: this.data.trips.length,
-            tripsByStatus: this.data.tripsByStatus,
-            committedTrip: this.data.committedTrip?.destination,
-            nextWindow: this.data.nextWindow?.name,
-            actionItems: this.data.actionItems.length,
-            milestones: this.data.milestones.length,
-            deadlines: this.data.deadlines.length,
-        });
+        return; // Skip all the complex rendering for now
 
         // DEBUG: Add inline styles to verify container is working
         (container as HTMLElement).style.backgroundColor = '#f0f0f0';

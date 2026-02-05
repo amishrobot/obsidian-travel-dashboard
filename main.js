@@ -61,23 +61,26 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     });
   }
   render() {
-    var _a, _b;
     const container = this.contentEl;
     container.empty();
-    container.addClass("travel-dashboard");
-    if (!this.data) {
-      container.createEl("div", { text: "Loading...", cls: "travel-loading" });
-      return;
+    const wrapper = container.createDiv();
+    wrapper.style.padding = "20px";
+    wrapper.style.backgroundColor = "#f0f0f0";
+    wrapper.createEl("h1", { text: "TRAVEL DASHBOARD" });
+    wrapper.createEl("p", { text: "If you can see this, the view is working!" });
+    if (this.data) {
+      wrapper.createEl("p", { text: `Trips loaded: ${this.data.trips.length}` });
+      wrapper.createEl("p", { text: `Deals loaded: ${this.data.deals.length}` });
+      if (this.data.trips.length > 0) {
+        const list = wrapper.createEl("ul");
+        for (const trip of this.data.trips) {
+          list.createEl("li", { text: `${trip.destination} - ${trip.status}` });
+        }
+      }
+    } else {
+      wrapper.createEl("p", { text: "No data loaded yet..." });
     }
-    console.log("[TravelDashboard] Starting render with data:", {
-      tripsCount: this.data.trips.length,
-      tripsByStatus: this.data.tripsByStatus,
-      committedTrip: (_a = this.data.committedTrip) == null ? void 0 : _a.destination,
-      nextWindow: (_b = this.data.nextWindow) == null ? void 0 : _b.name,
-      actionItems: this.data.actionItems.length,
-      milestones: this.data.milestones.length,
-      deadlines: this.data.deadlines.length
-    });
+    return;
     container.style.backgroundColor = "#f0f0f0";
     container.style.padding = "20px";
     console.log("[TravelDashboard] Rendering header...");
