@@ -142,6 +142,31 @@ Defines the data interfaces:
 - `TripStatus` - 'idea' | 'researching' | 'planned' | 'booked' | 'complete'
 - `DashboardData` - Everything the view needs to render
 
+## Lessons Learned (2026-02-05 Debug Session)
+
+### Container Element Matters
+- **WRONG**: `const container = this.contentEl`
+- **RIGHT**: `const container = this.containerEl.children[1]`
+- These are NOT always equivalent in Obsidian ItemView
+
+### CSS Classes Can Silently Break Rendering
+- Elements created with `container.createDiv({ cls: 'some-class' })` may not be visible
+- CSS specificity issues or theme conflicts can hide elements
+- **Debug approach**: First test with inline styles to verify container works
+- If inline styles work but CSS classes don't, the problem is in styles.css
+
+### Debugging Checklist for "Nothing Renders"
+1. Check console for errors
+2. Verify data is loaded (console.log the data)
+3. Test with a simple `container.innerHTML = '<h1>TEST</h1>'`
+4. If that works, the issue is in complex rendering code or CSS
+5. If that fails, the container reference is wrong
+
+### BRAT Caching
+- BRAT caches aggressively - checking for updates may not work
+- The plugin folder is symlinked: changes to main.js are immediate
+- Reload Obsidian: Cmd+P → "Reload app without saving"
+
 ## Common Issues
 
 ### Plugin shows old version
