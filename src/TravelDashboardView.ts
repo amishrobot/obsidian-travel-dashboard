@@ -190,7 +190,7 @@ export class TravelDashboardView extends ItemView {
     }
 
     private renderCommittedTripHero(container: Element, trip: Trip) {
-        const parsed = this.parseTripDates(trip.tripDates);
+        const parsed = this.parseTripDates(trip.dates);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -224,7 +224,7 @@ export class TravelDashboardView extends ItemView {
 
         // Trip dates
         const datesEl = content.createDiv({ cls: 'hero-dates' });
-        datesEl.createSpan({ text: trip.tripDates });
+        datesEl.createSpan({ text: trip.dates });
         if (trip.duration && trip.duration !== 'TBD') {
             datesEl.createSpan({ text: ` · ${trip.duration}`, cls: 'hero-duration' });
         }
@@ -356,7 +356,7 @@ export class TravelDashboardView extends ItemView {
         let smallestFutureDays = Infinity;
 
         for (const trip of trips) {
-            const parsed = this.parseTripDates(trip.tripDates);
+            const parsed = this.parseTripDates(trip.dates);
             if (!parsed) continue;
 
             const { startDate, endDate } = parsed;
