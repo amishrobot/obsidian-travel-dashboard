@@ -52,81 +52,55 @@ export class TravelDashboardView extends ItemView {
     render() {
         const container = this.contentEl;
         container.empty();
+        container.addClass('travel-dashboard');
 
-        // MINIMAL TEST - just show basic content
-        const wrapper = container.createDiv();
-        wrapper.style.padding = '20px';
-        wrapper.style.backgroundColor = '#f0f0f0';
-
-        wrapper.createEl('h1', { text: 'TRAVEL DASHBOARD' });
-        wrapper.createEl('p', { text: 'If you can see this, the view is working!' });
-
-        if (this.data) {
-            wrapper.createEl('p', { text: `Trips loaded: ${this.data.trips.length}` });
-            wrapper.createEl('p', { text: `Deals loaded: ${this.data.deals.length}` });
-
-            // Show trip names
-            if (this.data.trips.length > 0) {
-                const list = wrapper.createEl('ul');
-                for (const trip of this.data.trips) {
-                    list.createEl('li', { text: `${trip.destination} - ${trip.status}` });
-                }
-            }
-        } else {
-            wrapper.createEl('p', { text: 'No data loaded yet...' });
+        if (!this.data) {
+            container.createEl('div', { text: 'Loading...', cls: 'travel-loading' });
+            return;
         }
 
-        return; // Skip all the complex rendering for now
-
-        // DEBUG: Add inline styles to verify container is working
-        (container as HTMLElement).style.backgroundColor = '#f0f0f0';
-        (container as HTMLElement).style.padding = '20px';
-
         // Header
-        console.log('[TravelDashboard] Rendering header...');
         this.renderHeader(container);
 
         // ACTION REQUIRED section (at the very top, before hero)
-        console.log('[TravelDashboard] Rendering action required...');
         this.renderActionRequiredSection(container);
 
         // Hero Section (next upcoming trip with countdown)
-        console.log('[TravelDashboard] Rendering hero...');
         this.renderHeroSection(container);
 
         // Milestones (personal important dates)
-        console.log('[TravelDashboard] Rendering milestones...');
         this.renderMilestonesSection(container);
 
         // Researching (trips in progress)
-        console.log('[TravelDashboard] Rendering trips...');
         this.renderTripsSection(container);
 
         // Deals & Opportunities (right after trips for visibility)
-        console.log('[TravelDashboard] Rendering deals...');
         this.renderDealsSection(container);
 
         // Deadlines
-        console.log('[TravelDashboard] Rendering deadlines...');
         this.renderDeadlinesSection(container);
 
         // Price Tracker
-        console.log('[TravelDashboard] Rendering prices...');
         this.renderPricesSection(container);
 
         // Quick Actions (at bottom since they just copy commands)
-        console.log('[TravelDashboard] Rendering actions...');
         this.renderActionsSection(container);
-
-        console.log('[TravelDashboard] Render complete');
     }
 
     private renderHeader(container: Element) {
-        // DEBUG: Simplify to match working deadlines pattern
-        const header = container.createDiv({
-            text: '=== TRAVEL DASHBOARD ===',
-            cls: 'dashboard-header',
-            attr: { style: 'background: yellow; padding: 20px; font-size: 24px; font-weight: bold;' }
+        const header = container.createDiv({ cls: 'dashboard-header' });
+        header.createEl('h2', { text: 'TRAVEL DASHBOARD' });
+
+        const refreshBtn = header.createEl('button', {
+            cls: 'refresh-btn',
+            attr: { 'aria-label': 'Refresh' },
+        });
+        refreshBtn.innerHTML = '⟳';
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.addClass('spinning');
+            await this.refresh();
+            refreshBtn.removeClass('spinning');
+            new Notice('Travel data refreshed');
         });
     }
 
@@ -508,9 +482,7 @@ export class TravelDashboardView extends ItemView {
 
     private renderTripsSection(container: Element) {
         const tripsByStatus = this.data?.tripsByStatus;
-        console.log('[TravelDashboard] renderTripsSection - tripsByStatus:', tripsByStatus);
         if (!tripsByStatus) {
-            console.log('[TravelDashboard] renderTripsSection - tripsByStatus is null/undefined, returning early');
             return;
         }
 
@@ -527,22 +499,15 @@ export class TravelDashboardView extends ItemView {
 
         for (const { status, label, showIfEmpty } of statusGroups) {
             const trips = tripsByStatus[status];
-            console.log(`[TravelDashboard] renderTripsSection - ${status}: ${trips?.length || 0} trips`);
             if (!trips.length && !showIfEmpty) continue;
 
             const section = container.createDiv({ cls: `dashboard-section trips-${status}` });
-            // DEBUG: Make section visible
-            (section as HTMLElement).style.backgroundColor = 'lightgreen';
-            (section as HTMLElement).style.padding = '10px';
-            (section as HTMLElement).style.marginBottom = '10px';
-            (section as HTMLElement).style.border = '2px solid green';
             section.createEl('h3', { text: label });
 
             if (!trips.length) {
                 section.createDiv({ text: `No ${label.toLowerCase()} trips`, cls: 'empty-state' });
             } else {
                 for (const trip of trips) {
-                    console.log(`[TravelDashboard] renderTripsSection - rendering trip card: ${trip.destination}`);
                     this.renderTripCard(section, trip);
                 }
                 anyTripsShown = true;
@@ -551,7 +516,6 @@ export class TravelDashboardView extends ItemView {
 
         // If no trips at all, show a single empty state
         if (!anyTripsShown) {
-            console.log('[TravelDashboard] renderTripsSection - no trips shown, showing empty state');
             const section = container.createDiv({ cls: 'dashboard-section' });
             section.createEl('h3', { text: 'TRIPS' });
             section.createDiv({ text: 'No trips yet. Run /travel.research to start planning!', cls: 'empty-state' });
