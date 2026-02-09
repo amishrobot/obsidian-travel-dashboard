@@ -50,6 +50,9 @@ export class DataService {
             .filter(t => t.committed)
             .sort((a, b) => this.compareTripDates(a.dates, b.dates))[0] || null;
 
+        // Cross-reference windows with trips
+        this.windowParser.linkWindowsToTrips(travelWindows, trips);
+
         // Get next travel window (only if no committed trip)
         const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
 

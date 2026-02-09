@@ -101,20 +101,52 @@ export class TravelDashboardView extends ItemView {
             }
         }
 
-        // Travel Windows
+        // Upcoming Windows (PTO & Travel Windows)
         if (this.data.travelWindows.length > 0) {
             const now = new Date();
-            const upcomingWindows = this.data.travelWindows.filter(w => w.startDate > now).slice(0, 4);
+            const upcomingWindows = this.data.travelWindows.filter(w => w.endDate >= now);
             if (upcomingWindows.length > 0) {
-                html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">TRAVEL WINDOWS</h3>`;
+                html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">UPCOMING WINDOWS</h3>`;
                 for (const w of upcomingWindows) {
                     const daysUntil = Math.floor((w.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                     const isTopPick = w.isTopPick ? '⭐ ' : '';
+                    const isComingSoon = daysUntil <= 14 && daysUntil >= 0;
+                    const isPast = daysUntil < 0;
+                    const hasTrip = w.linkedTripName;
+
+                    // Border color based on status
+                    let borderColor = 'transparent';
+                    let borderStyle = '';
+                    if (isComingSoon && !hasTrip) {
+                        borderColor = '#e74c3c';
+                        borderStyle = ` border-left: 3px solid ${borderColor};`;
+                    } else if (w.isTopPick) {
+                        borderStyle = ' border-left: 3px solid #f39c12;';
+                    } else if (hasTrip) {
+                        borderStyle = ' border-left: 3px solid #4CAF50;';
+                    }
+
+                    // Status badge
+                    let statusBadge = '';
+                    if (hasTrip) {
+                        statusBadge = `<span style="background: #4CAF50; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${w.linkedTripName}</span>`;
+                    } else if (isComingSoon) {
+                        statusBadge = `<span style="background: #e74c3c; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">COMING UP!</span>`;
+                    } else {
+                        statusBadge = `<span style="background: var(--background-modifier-border); color: var(--text-muted); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Open</span>`;
+                    }
+
+                    // Category tag
+                    const categoryLabel = w.category === 'romantic' ? '💕' : w.category === 'long-weekend' ? '📅' : w.category === 'great' ? '👨‍👩‍👧' : '';
+
                     html += `
-                        <div style="background: var(--background-secondary); padding: 12px 14px; margin-bottom: 6px; border-radius: 6px;${w.isTopPick ? ' border-left: 3px solid #f39c12;' : ''}">
-                            <div style="font-weight: 600;">${isTopPick}${w.name}</div>
+                        <div style="background: var(--background-secondary); padding: 12px 14px; margin-bottom: 6px; border-radius: 6px;${borderStyle}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600;">${isTopPick}${categoryLabel}${categoryLabel ? ' ' : ''}${w.name}</span>
+                                ${statusBadge}
+                            </div>
                             <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${w.dates} · ${w.duration} · ${w.ptoNeeded} PTO</div>
-                            <div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${daysUntil} days away · ${w.whoCanGo}</div>
+                            <div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${isPast ? 'Now' : daysUntil + ' days away'} · ${w.whoCanGo}</div>
                         </div>
                     `;
                 }

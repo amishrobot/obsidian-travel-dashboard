@@ -104,17 +104,42 @@ var TravelDashboardView = class extends import_obsidian.ItemView {
     }
     if (this.data.travelWindows.length > 0) {
       const now = /* @__PURE__ */ new Date();
-      const upcomingWindows = this.data.travelWindows.filter((w) => w.startDate > now).slice(0, 4);
+      const upcomingWindows = this.data.travelWindows.filter((w) => w.endDate >= now);
       if (upcomingWindows.length > 0) {
-        html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">TRAVEL WINDOWS</h3>`;
+        html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">UPCOMING WINDOWS</h3>`;
         for (const w of upcomingWindows) {
           const daysUntil = Math.floor((w.startDate.getTime() - now.getTime()) / (1e3 * 60 * 60 * 24));
           const isTopPick = w.isTopPick ? "\u2B50 " : "";
+          const isComingSoon = daysUntil <= 14 && daysUntil >= 0;
+          const isPast = daysUntil < 0;
+          const hasTrip = w.linkedTripName;
+          let borderColor = "transparent";
+          let borderStyle = "";
+          if (isComingSoon && !hasTrip) {
+            borderColor = "#e74c3c";
+            borderStyle = ` border-left: 3px solid ${borderColor};`;
+          } else if (w.isTopPick) {
+            borderStyle = " border-left: 3px solid #f39c12;";
+          } else if (hasTrip) {
+            borderStyle = " border-left: 3px solid #4CAF50;";
+          }
+          let statusBadge = "";
+          if (hasTrip) {
+            statusBadge = `<span style="background: #4CAF50; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${w.linkedTripName}</span>`;
+          } else if (isComingSoon) {
+            statusBadge = `<span style="background: #e74c3c; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">COMING UP!</span>`;
+          } else {
+            statusBadge = `<span style="background: var(--background-modifier-border); color: var(--text-muted); font-size: 10px; padding: 2px 6px; border-radius: 4px;">Open</span>`;
+          }
+          const categoryLabel = w.category === "romantic" ? "\u{1F495}" : w.category === "long-weekend" ? "\u{1F4C5}" : w.category === "great" ? "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}" : "";
           html += `
-                        <div style="background: var(--background-secondary); padding: 12px 14px; margin-bottom: 6px; border-radius: 6px;${w.isTopPick ? " border-left: 3px solid #f39c12;" : ""}">
-                            <div style="font-weight: 600;">${isTopPick}${w.name}</div>
+                        <div style="background: var(--background-secondary); padding: 12px 14px; margin-bottom: 6px; border-radius: 6px;${borderStyle}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600;">${isTopPick}${categoryLabel}${categoryLabel ? " " : ""}${w.name}</span>
+                                ${statusBadge}
+                            </div>
                             <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${w.dates} \xB7 ${w.duration} \xB7 ${w.ptoNeeded} PTO</div>
-                            <div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${daysUntil} days away \xB7 ${w.whoCanGo}</div>
+                            <div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${isPast ? "Now" : daysUntil + " days away"} \xB7 ${w.whoCanGo}</div>
                         </div>
                     `;
         }
@@ -1294,32 +1319,57 @@ var TravelWindowParser = class {
     }
     const content = await this.app.vault.read(file);
     const windows = [];
-    const bestWindowsMatch = content.match(/### BEST Windows[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
-    if (bestWindowsMatch) {
-      const tableRows = this.extractTableRows(bestWindowsMatch[0]);
-      for (const row of tableRows) {
-        const window = this.parseWindowRow(row);
-        if (window)
-          windows.push(window);
-      }
-    }
     const topPickMatch = content.match(/### ⭐ TOP PICK:([^\n]+)[\s\S]*?(?=\n---|\n###|$)/i);
     if (topPickMatch) {
       const topPick = this.parseTopPick(topPickMatch[0], topPickMatch[1].trim());
       if (topPick) {
-        topPick.isTopPick = true;
-        const existingIndex = windows.findIndex(
-          (w) => w.name.toLowerCase().includes("july 4th") || w.name.toLowerCase().includes("shutdown")
-        );
-        if (existingIndex >= 0) {
-          windows[existingIndex] = { ...windows[existingIndex], ...topPick, isTopPick: true };
-        } else {
-          windows.unshift(topPick);
+        windows.push(topPick);
+      }
+    }
+    const bestWindowsMatch = content.match(/### BEST Windows[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
+    if (bestWindowsMatch) {
+      const tableRows = this.extractTableRows(bestWindowsMatch[0]);
+      for (const row of tableRows) {
+        const window = this.parseBestWindowRow(row);
+        if (window) {
+          const isDupe = windows.some(
+            (w) => w.name.toLowerCase().includes("july 4th") && window.name.toLowerCase().includes("july 4th")
+          );
+          if (!isDupe)
+            windows.push(window);
         }
       }
     }
-    windows.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-    return windows;
+    const greatWindowsMatch = content.match(/### Great Windows[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
+    if (greatWindowsMatch) {
+      const tableRows = this.extractTableRows(greatWindowsMatch[0]);
+      for (const row of tableRows) {
+        const window = this.parseGreatWindowRow(row);
+        if (window)
+          windows.push(window);
+      }
+    }
+    const longWeekendMatch = content.match(/### Long Weekend Trips[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
+    if (longWeekendMatch) {
+      const tableRows = this.extractTableRows(longWeekendMatch[0]);
+      for (const row of tableRows) {
+        const window = this.parseLongWeekendRow(row);
+        if (window)
+          windows.push(window);
+      }
+    }
+    const romanticMatch = content.match(/### Romantic \/ Couple Trip Windows[\s\S]*?\n\n\|.*\|[\s\S]*?(?=\n###|\n---|\n\n##|$)/i);
+    if (romanticMatch) {
+      const tableRows = this.extractTableRows(romanticMatch[0]);
+      for (const row of tableRows) {
+        const window = this.parseRomanticWindowRow(row);
+        if (window)
+          windows.push(window);
+      }
+    }
+    const deduped = this.deduplicateWindows(windows);
+    deduped.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    return deduped;
   }
   getNextWindow(windows) {
     const now = /* @__PURE__ */ new Date();
@@ -1330,18 +1380,37 @@ var TravelWindowParser = class {
     }
     return windows[0] || null;
   }
+  /**
+   * Cross-reference windows with trips to mark which windows have trips planned
+   */
+  linkWindowsToTrips(windows, trips) {
+    for (const window of windows) {
+      for (const trip of trips) {
+        const tripDate = this.extractTripStartDate(trip.dates);
+        if (!tripDate)
+          continue;
+        if (this.datesOverlap(tripDate, tripDate, window.startDate, window.endDate)) {
+          window.linkedTripName = trip.destination;
+          break;
+        }
+      }
+    }
+  }
   extractTableRows(tableSection) {
     const lines = tableSection.split("\n").filter((l) => l.startsWith("|"));
     const rows = [];
     for (let i = 2; i < lines.length; i++) {
       const cells = lines[i].split("|").slice(1, -1).map((c) => c.trim());
-      if (cells.length >= 4 && cells[0]) {
+      if (cells.length >= 3 && cells[0]) {
         rows.push(cells);
       }
     }
     return rows;
   }
-  parseWindowRow(cells) {
+  /**
+   * BEST Windows table: Window | Dates | Duration | PTO Needed | Why It Works
+   */
+  parseBestWindowRow(cells) {
     if (cells.length < 4)
       return null;
     const name = cells[0].replace(/\*\*/g, "").trim();
@@ -1360,7 +1429,83 @@ var TravelWindowParser = class {
       duration,
       ptoNeeded,
       whoCanGo: this.inferWhoCanGo(name, notes),
-      notes: notes.trim() || void 0
+      notes: notes.trim() || void 0,
+      category: "best"
+    };
+  }
+  /**
+   * Great Windows table: Window | Dates | Who | PTO Needed | Notes
+   */
+  parseGreatWindowRow(cells) {
+    if (cells.length < 4)
+      return null;
+    const name = cells[0].replace(/\*\*/g, "").trim();
+    const dates = cells[1].trim();
+    const who = cells[2].trim();
+    const ptoNeeded = cells[3].replace(/\*\*/g, "").trim();
+    const notes = cells[4] || "";
+    const dateRange = this.parseDateRange(dates);
+    if (!dateRange)
+      return null;
+    return {
+      name,
+      dates,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      duration: this.calculateDuration(dateRange.start, dateRange.end),
+      ptoNeeded,
+      whoCanGo: who || "Parents + youngest",
+      notes: notes.trim() || void 0,
+      category: "great"
+    };
+  }
+  /**
+   * Long Weekend Trips table: Window | Dates | PTO | Total Days Off
+   */
+  parseLongWeekendRow(cells) {
+    if (cells.length < 4)
+      return null;
+    const name = cells[0].replace(/\*\*/g, "").trim();
+    const dates = cells[1].trim();
+    const ptoNeeded = cells[2].trim();
+    const totalDaysOff = cells[3].trim();
+    const dateRange = this.parseDateRange(dates);
+    if (!dateRange)
+      return null;
+    return {
+      name,
+      dates,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      duration: totalDaysOff.replace(/\s*\(.*\)/, "") + " days",
+      ptoNeeded,
+      whoCanGo: "Adults / flexible",
+      category: "long-weekend"
+    };
+  }
+  /**
+   * Romantic / Couple Trip Windows table: Occasion | 2026 Dates | PTO Needed | Strategy
+   */
+  parseRomanticWindowRow(cells) {
+    if (cells.length < 3)
+      return null;
+    const name = cells[0].replace(/\*\*/g, "").trim();
+    const dates = cells[1].trim();
+    const ptoNeeded = cells[2].trim();
+    const strategy = cells[3] || "";
+    const dateRange = this.parseDateRange(dates);
+    if (!dateRange)
+      return null;
+    return {
+      name,
+      dates,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      duration: this.calculateDuration(dateRange.start, dateRange.end),
+      ptoNeeded,
+      whoCanGo: "Couple only",
+      notes: strategy.trim() || void 0,
+      category: "romantic"
     };
   }
   parseTopPick(section, name) {
@@ -1382,7 +1527,8 @@ var TravelWindowParser = class {
       ptoNeeded: ((_c = ptoMatch == null ? void 0 : ptoMatch[1]) == null ? void 0 : _c.trim()) || "0",
       whoCanGo: "Full family",
       notes: (_d = whyMatch == null ? void 0 : whyMatch[1]) == null ? void 0 : _d.trim(),
-      isTopPick: true
+      isTopPick: true,
+      category: "top-pick"
     };
   }
   parseDateRange(dateStr) {
@@ -1432,7 +1578,16 @@ var TravelWindowParser = class {
       return {
         start: new Date(year, startMonth, startDay),
         end: new Date(year, endMonth, 28)
-        // End of month approximation
+      };
+    }
+    const parenMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})\s*-\s*(\d{1,2})\s*\(/i);
+    if (parenMatch) {
+      const month = monthNames[parenMatch[1].toLowerCase()];
+      const startDay = parseInt(parenMatch[2]);
+      const endDay = parseInt(parenMatch[3]);
+      return {
+        start: new Date(year, month, startDay),
+        end: new Date(year, month, endDay)
       };
     }
     const singleMatch = cleanDate.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d{1,2})/i);
@@ -1445,6 +1600,10 @@ var TravelWindowParser = class {
       };
     }
     return null;
+  }
+  calculateDuration(start, end) {
+    const days = Math.floor((end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24)) + 1;
+    return `${days} days`;
   }
   inferWhoCanGo(name, notes) {
     const combined = `${name} ${notes}`.toLowerCase();
@@ -1461,6 +1620,72 @@ var TravelWindowParser = class {
       return "Adults / flexible";
     }
     return "Full family";
+  }
+  /**
+   * Deduplicate windows that appear in multiple tables (e.g., Memorial Day in both BEST and Long Weekend)
+   * Keep the more detailed entry (longer notes, or higher-tier category)
+   */
+  deduplicateWindows(windows) {
+    const seen = /* @__PURE__ */ new Map();
+    const categoryPriority = {
+      "top-pick": 0,
+      "best": 1,
+      "great": 2,
+      "romantic": 3,
+      "long-weekend": 4
+    };
+    for (const w of windows) {
+      const key = w.name.toLowerCase().replace(/[^a-z]/g, "");
+      const existing = seen.get(key);
+      if (!existing || categoryPriority[w.category] < categoryPriority[existing.category]) {
+        seen.set(key, w);
+      }
+    }
+    return Array.from(seen.values());
+  }
+  extractTripStartDate(dateStr) {
+    if (!dateStr || dateStr === "TBD")
+      return null;
+    const monthNames = {
+      "jan": 0,
+      "january": 0,
+      "feb": 1,
+      "february": 1,
+      "mar": 2,
+      "march": 2,
+      "apr": 3,
+      "april": 3,
+      "may": 4,
+      "jun": 5,
+      "june": 5,
+      "jul": 6,
+      "july": 6,
+      "aug": 7,
+      "august": 7,
+      "sep": 8,
+      "september": 8,
+      "oct": 9,
+      "october": 9,
+      "nov": 10,
+      "november": 10,
+      "dec": 11,
+      "december": 11
+    };
+    const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+    }
+    const monthMatch = dateStr.match(/(\w+)\s+(\d+)(?:\s*-\s*\w*\s*\d+)?,?\s*(\d{4})/i);
+    if (monthMatch) {
+      const month = monthNames[monthMatch[1].toLowerCase().substring(0, 3)];
+      if (month !== void 0) {
+        return new Date(parseInt(monthMatch[3]), month, parseInt(monthMatch[2]));
+      }
+    }
+    return null;
+  }
+  datesOverlap(start1, end1, start2, end2) {
+    return start1 <= end2 && end1 >= start2;
   }
 };
 
@@ -1496,6 +1721,7 @@ var DataService = class {
     const deals = this.dealsParser.getCurrentSeasonDeals(allDeals);
     const milestones = await this.parseMilestones();
     const committedTrip = trips.filter((t) => t.committed).sort((a, b) => this.compareTripDates(a.dates, b.dates))[0] || null;
+    this.windowParser.linkWindowsToTrips(travelWindows, trips);
     const nextWindow = committedTrip ? null : this.windowParser.getNextWindow(travelWindows);
     const actionItems = this.buildActionItems(travelWindows, discoveredDeals, trips);
     return {

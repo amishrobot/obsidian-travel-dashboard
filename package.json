@@ -1,6 +1,6 @@
 {
   "name": "obsidian-travel-dashboard",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "description": "Travel dashboard sidebar for JoshOS",
   "main": "main.js",
   "scripts": {

@@ -26,6 +26,8 @@ export interface Trip {
     lastUpdated: Date;
 }
 
+export type WindowCategory = 'top-pick' | 'best' | 'great' | 'long-weekend' | 'romantic';
+
 export interface TravelWindow {
     name: string;
     dates: string;
@@ -36,6 +38,8 @@ export interface TravelWindow {
     whoCanGo: string;
     notes?: string;
     isTopPick?: boolean;
+    category: WindowCategory;
+    linkedTripName?: string;   // Name of trip covering this window, if any
 }
 
 export interface ActionItem {
