@@ -91,24 +91,34 @@ export class TravelDashboardView extends ItemView {
             `;
         }
 
-        // Milestones (Important Dates like Adrienne Day)
-        if (this.data.milestones.length > 0) {
-            const upcoming = this.data.milestones.filter(m => m.daysUntil <= 90);
-            if (upcoming.length > 0) {
-                html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">COMING UP</h3>`;
-                for (const m of upcoming) {
-                    const urgency = m.daysUntil <= 14 ? '#e74c3c' : m.daysUntil <= 30 ? '#f39c12' : 'var(--text-muted)';
-                    html += `
-                        <div style="background: var(--background-secondary); padding: 10px 14px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <span>${m.emoji} ${m.name}</span>
-                            <span style="color: ${urgency}; font-weight: 500;">${m.daysUntil === 0 ? 'Today!' : m.daysUntil === 1 ? 'Tomorrow!' : m.daysUntil + ' days'}</span>
-                        </div>
-                    `;
-                }
+        // Committed trips (Booked & Planned) — right after hero
+        const renderTripCards = (status: string, trips: Trip[]) => {
+            if (trips.length === 0) return;
+            const borderColor = status === 'booked' ? '#4CAF50' : status === 'planned' ? '#2196F3' : status === 'researching' ? '#FF9800' : '#9E9E9E';
+            html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">${status.toUpperCase()}</h3>`;
+            for (const trip of trips) {
+                const friendlyDates = this.formatFriendlyDates(trip.dates);
+                const nights = this.calcNights(trip.dates);
+                const nightsStr = nights ? `${nights} night${nights > 1 ? 's' : ''}` : (trip.duration && trip.duration !== 'TBD' ? trip.duration : '');
+                const confirmations: string[] = [];
+                if (trip.flightConfirmation) confirmations.push('✈️');
+                if (trip.hotelConfirmation) confirmations.push('🏨');
+                const confStr = confirmations.length > 0 ? ` ${confirmations.join('')}` : '';
+                html += `
+                    <div style="background: var(--background-secondary); padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="app.workspace.openLinkText('${trip.filePath}', '', false)">
+                        <div style="font-weight: 600; font-size: 15px;">${trip.countryCode || '🌍'} ${trip.destination}${confStr}</div>
+                        <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${friendlyDates}${nightsStr ? ' · ' + nightsStr : ''}</div>
+                        ${trip.travelers ? `<div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${trip.travelers}</div>` : ''}
+                    </div>
+                `;
             }
-        }
+        };
 
-        // Upcoming Windows (PTO & Travel Windows)
+        // Booked and Planned trips come first (actionable, committed)
+        renderTripCards('booked', this.data.tripsByStatus['booked']);
+        renderTripCards('planned', this.data.tripsByStatus['planned']);
+
+        // Upcoming Windows
         if (this.data.travelWindows.length > 0) {
             const now = new Date();
             const upcomingWindows = this.data.travelWindows.filter(w => w.endDate >= now);
@@ -122,11 +132,9 @@ export class TravelDashboardView extends ItemView {
                     const hasTrip = w.linkedTripName;
 
                     // Border color based on status
-                    let borderColor = 'transparent';
                     let borderStyle = '';
                     if (isComingSoon && !hasTrip) {
-                        borderColor = '#e74c3c';
-                        borderStyle = ` border-left: 3px solid ${borderColor};`;
+                        borderStyle = ` border-left: 3px solid #e74c3c;`;
                     } else if (w.isTopPick) {
                         borderStyle = ' border-left: 3px solid #f39c12;';
                     } else if (hasTrip) {
@@ -160,26 +168,21 @@ export class TravelDashboardView extends ItemView {
             }
         }
 
-        // Trips by status
-        const statuses = ['booked', 'planned', 'researching', 'idea'] as const;
-        for (const status of statuses) {
-            const trips = this.data.tripsByStatus[status];
-            if (trips.length > 0) {
-                html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">${status.toUpperCase()}</h3>`;
-                for (const trip of trips) {
-                    const borderColor = status === 'booked' ? '#4CAF50' : status === 'planned' ? '#2196F3' : status === 'researching' ? '#FF9800' : '#9E9E9E';
-                    const friendlyDates = this.formatFriendlyDates(trip.dates);
-                    const nights = this.calcNights(trip.dates);
-                    const nightsStr = nights ? `${nights} night${nights > 1 ? 's' : ''}` : (trip.duration && trip.duration !== 'TBD' ? trip.duration : '');
-                    const confirmations: string[] = [];
-                    if (trip.flightConfirmation) confirmations.push('✈️');
-                    if (trip.hotelConfirmation) confirmations.push('🏨');
-                    const confStr = confirmations.length > 0 ? ` ${confirmations.join('')}` : '';
+        // Researching and Idea trips (below windows — still exploring)
+        renderTripCards('researching', this.data.tripsByStatus['researching']);
+        renderTripCards('idea', this.data.tripsByStatus['idea']);
+
+        // Milestones (Important Dates)
+        if (this.data.milestones.length > 0) {
+            const upcoming = this.data.milestones.filter(m => m.daysUntil <= 90);
+            if (upcoming.length > 0) {
+                html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">COMING UP</h3>`;
+                for (const m of upcoming) {
+                    const urgency = m.daysUntil <= 14 ? '#e74c3c' : m.daysUntil <= 30 ? '#f39c12' : 'var(--text-muted)';
                     html += `
-                        <div style="background: var(--background-secondary); padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="app.workspace.openLinkText('${trip.filePath}', '', false)">
-                            <div style="font-weight: 600; font-size: 15px;">${trip.countryCode || '🌍'} ${trip.destination}${confStr}</div>
-                            <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${friendlyDates}${nightsStr ? ' · ' + nightsStr : ''}</div>
-                            ${trip.travelers ? `<div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${trip.travelers}</div>` : ''}
+                        <div style="background: var(--background-secondary); padding: 10px 14px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>${m.emoji} ${m.name}</span>
+                            <span style="color: ${urgency}; font-weight: 500;">${m.daysUntil === 0 ? 'Today!' : m.daysUntil === 1 ? 'Tomorrow!' : m.daysUntil + ' days'}</span>
                         </div>
                     `;
                 }
