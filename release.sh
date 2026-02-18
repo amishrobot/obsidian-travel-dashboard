@@ -34,7 +34,7 @@ git push
 
 # Create release
 echo "🚀 Creating GitHub release..."
-gh release create "$VERSION" main.js manifest.json styles.css --title "v$VERSION" --notes "$NOTES"
+gh release create "v$VERSION" main.js manifest.json styles.css --title "v$VERSION" --notes "$NOTES"
 
 echo "✅ Released v$VERSION"
 echo "BRAT users can now check for updates."
