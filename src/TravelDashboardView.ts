@@ -67,11 +67,18 @@ export class TravelDashboardView extends ItemView {
         // Hero section - committed trip countdown
         if (this.data.committedTrip) {
             const trip = this.data.committedTrip;
+            const friendlyDates = this.formatFriendlyDates(trip.dates);
+            const details = this.formatTripDetails(trip);
+            const confirmations: string[] = [];
+            if (trip.flightConfirmation) confirmations.push('✈️ Flight booked');
+            if (trip.hotelConfirmation) confirmations.push('🏨 Hotel booked');
             html += `
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 16px;">
-                    <div style="font-size: 24px; font-weight: bold;">${trip.destination}</div>
-                    <div style="opacity: 0.9; margin-top: 4px;">${trip.dates}</div>
-                    <div style="margin-top: 8px; font-size: 12px; opacity: 0.8;">COMMITTED</div>
+                    <div style="font-size: 22px; font-weight: bold;">${trip.destination}</div>
+                    <div style="opacity: 0.9; margin-top: 4px; font-size: 14px;">${friendlyDates}</div>
+                    ${details ? `<div style="opacity: 0.8; margin-top: 4px; font-size: 12px;">${details}</div>` : ''}
+                    ${confirmations.length > 0 ? `<div style="opacity: 0.75; margin-top: 6px; font-size: 11px;">${confirmations.join(' · ')}</div>` : ''}
+                    <div style="margin-top: 8px; font-size: 11px; opacity: 0.7; letter-spacing: 0.05em;">COMMITTED</div>
                 </div>
             `;
         } else if (this.data.nextWindow) {
@@ -161,11 +168,18 @@ export class TravelDashboardView extends ItemView {
                 html += `<h3 style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 20px 0 8px 0; letter-spacing: 0.05em;">${status.toUpperCase()}</h3>`;
                 for (const trip of trips) {
                     const borderColor = status === 'booked' ? '#4CAF50' : status === 'planned' ? '#2196F3' : status === 'researching' ? '#FF9800' : '#9E9E9E';
+                    const friendlyDates = this.formatFriendlyDates(trip.dates);
+                    const nights = this.calcNights(trip.dates);
+                    const nightsStr = nights ? `${nights} night${nights > 1 ? 's' : ''}` : (trip.duration && trip.duration !== 'TBD' ? trip.duration : '');
+                    const confirmations: string[] = [];
+                    if (trip.flightConfirmation) confirmations.push('✈️');
+                    if (trip.hotelConfirmation) confirmations.push('🏨');
+                    const confStr = confirmations.length > 0 ? ` ${confirmations.join('')}` : '';
                     html += `
                         <div style="background: var(--background-secondary); padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="app.workspace.openLinkText('${trip.filePath}', '', false)">
-                            <div style="font-weight: 600; font-size: 15px;">${trip.countryCode || '🌍'} ${trip.destination}</div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">${trip.dates}${trip.duration ? ' · ' + trip.duration : ''}</div>
-                            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">${trip.travelers}</div>
+                            <div style="font-weight: 600; font-size: 15px;">${trip.countryCode || '🌍'} ${trip.destination}${confStr}</div>
+                            <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">${friendlyDates}${nightsStr ? ' · ' + nightsStr : ''}</div>
+                            ${trip.travelers ? `<div style="color: var(--text-faint); font-size: 11px; margin-top: 2px;">${trip.travelers}</div>` : ''}
                         </div>
                     `;
                 }
@@ -581,10 +595,72 @@ export class TravelDashboardView extends ItemView {
                 }
             }
 
+            // Pattern 4: "YYYY-MM-DD to YYYY-MM-DD" (ISO with "to")
+            const isoPattern = /^(\d{4})-(\d{2})-(\d{2})\s+to\s+(\d{4})-(\d{2})-(\d{2})$/i;
+            match = tripDates.match(isoPattern);
+            if (match) {
+                const startDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                const endDate = new Date(parseInt(match[4]), parseInt(match[5]) - 1, parseInt(match[6]));
+                return { startDate, endDate };
+            }
+
+            // Pattern 5: Single ISO date "YYYY-MM-DD" (start date only)
+            const singleIsoPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+            match = tripDates.match(singleIsoPattern);
+            if (match) {
+                const startDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                return { startDate, endDate: startDate };
+            }
+
             return null;
         } catch {
             return null;
         }
+    }
+
+    private formatFriendlyDates(tripDates: string): string {
+        const parsed = this.parseTripDates(tripDates);
+        if (!parsed) return tripDates;
+
+        const { startDate, endDate } = parsed;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const now = new Date();
+        const sameYear = startDate.getFullYear() === now.getFullYear();
+        const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+        const sameDay = startDate.getTime() === endDate.getTime();
+
+        const startMonth = monthNames[startDate.getMonth()];
+        const yearSuffix = sameYear ? '' : `, ${startDate.getFullYear()}`;
+
+        if (sameDay) {
+            return `${startMonth} ${startDate.getDate()}${yearSuffix}`;
+        } else if (sameMonth) {
+            return `${startMonth} ${startDate.getDate()}–${endDate.getDate()}${yearSuffix}`;
+        } else {
+            const endMonth = monthNames[endDate.getMonth()];
+            const endYearSuffix = endDate.getFullYear() === startDate.getFullYear() ? '' : `, ${endDate.getFullYear()}`;
+            return `${startMonth} ${startDate.getDate()} – ${endMonth} ${endDate.getDate()}${endYearSuffix || yearSuffix}`;
+        }
+    }
+
+    private calcNights(tripDates: string): number | null {
+        const parsed = this.parseTripDates(tripDates);
+        if (!parsed) return null;
+        const diff = Math.round((parsed.endDate.getTime() - parsed.startDate.getTime()) / (1000 * 60 * 60 * 24));
+        return diff > 0 ? diff : null;
+    }
+
+    private formatTripDetails(trip: Trip): string {
+        const parts: string[] = [];
+        const nights = this.calcNights(trip.dates);
+        if (nights) {
+            parts.push(`${nights} night${nights > 1 ? 's' : ''}`);
+        } else if (trip.duration && trip.duration !== 'TBD') {
+            parts.push(trip.duration);
+        }
+        if (trip.travelers) parts.push(trip.travelers);
+        if (trip.budget) parts.push(trip.budget);
+        return parts.join(' · ');
     }
 
     private formatCountdown(daysUntilDeparture: number, tripStatus: 'upcoming' | 'traveling' | 'departed'): string {
