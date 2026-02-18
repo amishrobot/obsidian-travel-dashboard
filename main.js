@@ -967,8 +967,8 @@ var TripParser = class {
       filePath: file.path,
       created: frontmatter.created || "",
       updated: frontmatter.updated,
-      flightConfirmation: frontmatter.flight_confirmation,
-      hotelConfirmation: frontmatter.hotel_confirmation,
+      flightConfirmation: frontmatter.flight_confirmation || frontmatter["flight-confirmation"],
+      hotelConfirmation: frontmatter.hotel_confirmation || frontmatter["hotel-confirmation"],
       lastUpdated: new Date(file.stat.mtime)
     };
   }
